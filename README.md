@@ -12,17 +12,11 @@ changes are cut as `v2` (Dependabot opens `@v1`→`@v2` PRs).
 repos): no branch deletion, no force-push, linear history required, and all
 changes land via PR (0 required approvals, squash/rebase merges only).
 
-Required status checks:
-
-- **`Lint Workflows`** — `actionlint` over `.github/workflows/**` (see
-  `.github/workflows/ci.yml`).
-- **`claude-review / claude-review`** — this repo dogfoods its own reusable
-  review workflow via `.github/workflows/self-claude-code-review.yml`. This
-  check is only required once the `CLAUDE_CODE_OAUTH_TOKEN` secret is set on the
-  repo; without it the review job cannot run.
-
-`.github/workflows/self-claude.yml` likewise dogfoods the interactive `@claude`
-workflow (not a required check).
+The one required status check is **`Lint Workflows`** — `actionlint` over
+`.github/workflows/**` (see `.github/workflows/ci.yml`). The reusable Claude
+workflows are intentionally not dogfooded here: they need a
+`CLAUDE_CODE_OAUTH_TOKEN` secret this repo doesn't carry, and the review action
+skips whenever a PR changes a workflow file — which most PRs here do.
 
 Inspect or edit the ruleset with the procedure in
 `docs/superpowers/plans/2026-07-20-shared-workflows.md` (fetch via
