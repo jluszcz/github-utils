@@ -17,7 +17,8 @@
 - Callers use `secrets: inherit`.
 - **v1 preserves current behavior byte-for-behavior** — do NOT bump action versions (`checkout@v4`, `claude-code-action@v1`, etc.) in this plan. Action-version bumps are a deliberate follow-up `v1` tag-move (the first demonstration of fix-once), out of scope here.
 - All consuming repos are public, owned by user `jluszcz`.
-- **Status-check rename risk:** moving a job into a reusable workflow renames its check from `<job>` to `<caller-job> / <job>`. Every rollout task must audit branch-protection required checks for that repo before merging.
+- **Status-check rename risk:** moving a job into a reusable workflow renames its check from `<job>` to `<caller-job> / <job>`. Every rollout task must audit required checks for that repo before merging. **These repos enforce required checks via rulesets, not classic branch protection** — audit with `gh api repos/jluszcz/<repo>/rules/branches/main` (the effective-rules endpoint, which covers both rulesets and classic protection), NOT `branches/main/protection` (which 404s on ruleset-only repos and hides the requirement). To avoid guessing the new check string, read the exact context off a running PR before editing the ruleset.
+- **Ruleset edit procedure:** fetch the ruleset (`gh api repos/jluszcz/<repo>/rulesets/<id>`), rename the affected `required_status_checks[].context` to the exact new value, and PUT it back (`gh api --method PUT repos/jluszcz/<repo>/rulesets/<id> --input <file>`), sending only `name,target,enforcement,conditions,rules,bypass_actors`.
 
 ---
 
@@ -357,10 +358,34 @@ Comment `@claude say hello` on the PR. Confirm the `Claude Code` workflow trigge
 Run: `gh run list --workflow=claude.yml --limit 3`
 Expected: a run appears for the comment event.
 
-- [ ] **Step 9: Audit branch-protection required checks**
+- [ ] **Step 9: Audit required checks (rulesets) and rename the migrated check**
 
-Run: `gh api repos/jluszcz/rust-utils/branches/main/protection --jq '.required_status_checks.checks[]?.context' 2>/dev/null || echo "no branch protection / no required checks"`
-If any required check is the old bare name (e.g. `claude-review`), update the rule to the new `claude-review / claude-review` name in the GitHub UI (Settings → Branches) before merging. Otherwise nothing to do.
+List the effective required checks (covers rulesets and classic protection):
+```bash
+gh api repos/jluszcz/rust-utils/rules/branches/main \
+  --jq '[.[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context]'
+```
+`rust-utils` requires `Build, Test & Lint` (CI, unaffected) and `claude-review` (renamed by this migration). Read the **exact** new context off the running PR:
+```bash
+gh pr view --json statusCheckRollup --jq '.statusCheckRollup[].name' | sort -u
+```
+Then update the ruleset's `claude-review` context to that exact string (expected `claude-review / claude-review`):
+```bash
+RS=$(gh api repos/jluszcz/rust-utils/rulesets --jq '.[] | select(.name=="main") | .id')
+gh api repos/jluszcz/rust-utils/rulesets/$RS > /tmp/rs.json
+python3 - <<'PY'
+import json
+d=json.load(open('/tmp/rs.json'))
+for r in d['rules']:
+    if r['type']=='required_status_checks':
+        for c in r['parameters']['required_status_checks']:
+            if c['context']=='claude-review':
+                c['context']='claude-review / claude-review'
+body={k:d[k] for k in ['name','target','enforcement','conditions','rules','bypass_actors']}
+json.dump(body,open('/tmp/rs-put.json','w'))
+PY
+gh api --method PUT repos/jluszcz/rust-utils/rulesets/$RS --input /tmp/rs-put.json --jq '.name + " updated"'
+```
 
 - [ ] **Step 10: Merge the canary PR**
 
@@ -410,13 +435,14 @@ gh pr create --fill --title "Use shared github-utils reusable workflows"
 ```
 Expected per repo: actionlint clean; PR opened; the `claude-review / claude-review` check runs green on the PR.
 
-- [ ] **Step 3: Audit branch protection and merge each PR**
+- [ ] **Step 3: Audit required checks (rulesets) and merge each PR**
 
-For each `<repo>`:
+For each `<repo>`, list effective required checks:
 ```bash
-gh api repos/jluszcz/<repo>/branches/main/protection --jq '.required_status_checks.checks[]?.context' 2>/dev/null || echo "none"
+gh api repos/jluszcz/<repo>/rules/branches/main \
+  --jq '[.[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context]'
 ```
-Update any old bare required-check name to `claude-review / claude-review`, then:
+If `claude-review` (or `auto-merge`) appears as a required context, rename it to the exact new caller check name using the ruleset-edit procedure from Task 3 Step 9 (read the exact name off the PR's `statusCheckRollup` first). Then:
 ```bash
 cd /Users/jacob/Documents/Programs/<repo>
 gh pr merge --squash --delete-branch
