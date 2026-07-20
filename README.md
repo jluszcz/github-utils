@@ -18,10 +18,56 @@ workflows are intentionally not dogfooded here: they need a
 `CLAUDE_CODE_OAUTH_TOKEN` secret this repo doesn't carry, and the review action
 skips whenever a PR changes a workflow file — which most PRs here do.
 
-Inspect or edit the ruleset with the procedure in
-`docs/superpowers/plans/2026-07-20-shared-workflows.md` (fetch via
-`gh api repos/jluszcz/github-utils/rulesets/<id>`; PUT back `name,target,
-enforcement,conditions,rules,bypass_actors`).
+Inspect or edit the ruleset by fetching it (`gh api
+repos/jluszcz/github-utils/rulesets/<id>`), editing the JSON, and PUTting back
+only `name,target,enforcement,conditions,rules,bypass_actors`.
+
+## Releasing changes (moving tags)
+
+Consumers pin the moving major tag `@v1`, so a change here reaches every repo on
+its next workflow run — no per-repo edits. How you release depends on whether the
+change is backward-compatible.
+
+### Patch / minor — move `v1`
+
+Backward-compatible fixes (version bumps, condition tweaks, new *optional*
+inputs) reuse the existing major tag. After merging the change to `main`:
+
+```bash
+git checkout main && git pull
+git tag -fa v1 -m "v1: <what changed>"   # -f re-points the existing tag
+git push --force origin v1
+```
+
+Every consumer picks it up on its next run. Record the move in `CHANGELOG.md` in
+the same PR as the change.
+
+### Breaking — cut `v2`
+
+Changes that break existing callers (a *required* new input, a removed input, a
+renamed job/status-check) get a new major tag so pinned `@v1` consumers keep
+working:
+
+```bash
+git checkout main && git pull
+git tag -a v2 -m "v2: <what changed>"
+git push origin v2
+```
+
+Consumers then migrate `@v1` → `@v2` at their own pace. Each repo's Dependabot
+`github-actions` ecosystem tracks the reusable-workflow ref and opens reviewable
+bump PRs. Keep moving `v1` for backward-compatible fixes to the old major until
+every consumer has migrated.
+
+### Which is it?
+
+| Change | Tag |
+|---|---|
+| Bump a pinned action version (`checkout`, `claude-code-action`) | move `v1` |
+| Tweak an `if:` gate / permissions (same job names) | move `v1` |
+| Add an optional `workflow_call` input with a default | move `v1` |
+| Add a *required* input, or remove/rename an input | cut `v2` |
+| Rename a job (changes the `<job> / <job>` status-check name) | cut `v2` |
 
 ## Callers
 
