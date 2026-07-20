@@ -389,11 +389,22 @@ On the PR created in Step 6, confirm in the Actions tab that a check named `clau
 Run: `gh pr checks --watch`
 Expected: the `claude-review / claude-review` check is present and green.
 
-- [ ] **Step 8: Verify the `@claude` mention path**
+- [ ] **Step 8: Verify the `@claude` mention path — POST-MERGE ONLY**
 
-Comment `@claude say hello` on the PR. Confirm the `Claude Code` workflow triggers and Claude responds.
-Run: `gh run list --workflow=claude.yml --limit 3`
-Expected: a run appears for the comment event.
+`issue_comment`/`issues` events always execute the workflow file from the
+**default branch**, so the `claude.yml` caller cannot be validated from the PR
+branch — pre-merge, an `@claude` comment runs the *old* `main` copy. Validate
+this caller **after Step 10 merges** the PR: comment `@claude` on any issue/PR
+and confirm the `Claude Code` run's `claude / claude` job concludes `success`
+and the bot replies.
+```bash
+gh run list --workflow 'Claude Code' --event issue_comment --limit 2 \
+  --json conclusion,databaseId --jq '.[] | [.databaseId, .conclusion] | @tsv'
+```
+Expected: the run for your comment is `success`. Note: each `@claude` comment
+produces **two** runs — the active one, plus a `skipped` one triggered by
+Claude's own reply comment (which lacks `@claude`, so the gate correctly skips
+it). This double-run is pre-existing behavior, not a regression.
 
 - [ ] **Step 9: Audit required checks (rulesets) and rename the migrated check**
 
