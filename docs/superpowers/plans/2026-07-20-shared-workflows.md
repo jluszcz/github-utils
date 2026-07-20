@@ -150,6 +150,10 @@ Consumers pin the moving major tag `@v1`. Patch/minor fixes move `v1`; breaking 
 
 ## Callers
 
+Each caller declares a `permissions:` block — a called reusable workflow's job
+permissions cannot exceed the caller's `GITHUB_TOKEN`, and these repos default
+to `contents: read` only.
+
 ### `.github/workflows/claude.yml`
 
 ```yaml
@@ -159,6 +163,12 @@ on:
   pull_request_review_comment: { types: [created] }
   issues: { types: [opened, assigned] }
   pull_request_review: { types: [submitted] }
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+  id-token: write
+  actions: read
 jobs:
   claude:
     uses: jluszcz/github-utils/.github/workflows/claude.yml@v1
@@ -172,6 +182,11 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
+permissions:
+  contents: read
+  pull-requests: write
+  issues: read
+  id-token: write
 jobs:
   claude-review:
     uses: jluszcz/github-utils/.github/workflows/claude-code-review.yml@v1
@@ -185,6 +200,9 @@ name: Auto-Merge
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+permissions:
+  contents: write
+  pull-requests: write
 jobs:
   auto-merge:
     uses: jluszcz/github-utils/.github/workflows/auto-merge.yml@v1
@@ -292,11 +310,22 @@ on:
   pull_request_review_comment: { types: [created] }
   issues: { types: [opened, assigned] }
   pull_request_review: { types: [submitted] }
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+  id-token: write
+  actions: read
 jobs:
   claude:
     uses: jluszcz/github-utils/.github/workflows/claude.yml@v1
     secrets: inherit
 ```
+
+The `permissions:` block is required: a called reusable workflow's job
+permissions cannot exceed the caller's `GITHUB_TOKEN` permissions, and these
+repos default to `contents: read` only. Without it the reusable job fails to
+start with "is requesting '...', but is only allowed '...none'".
 
 - [ ] **Step 3: Replace `claude-code-review.yml` with the caller**
 
@@ -306,6 +335,11 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
+permissions:
+  contents: read
+  pull-requests: write
+  issues: read
+  id-token: write
 jobs:
   claude-review:
     uses: jluszcz/github-utils/.github/workflows/claude-code-review.yml@v1
@@ -320,6 +354,9 @@ name: Auto-Merge
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+permissions:
+  contents: write
+  pull-requests: write
 jobs:
   auto-merge:
     uses: jluszcz/github-utils/.github/workflows/auto-merge.yml@v1

@@ -8,6 +8,11 @@ changes are cut as `v2` (Dependabot opens `@v1`→`@v2` PRs).
 
 ## Callers
 
+Each caller declares a `permissions:` block. A called reusable workflow's job
+permissions cannot exceed the caller's `GITHUB_TOKEN` permissions, and these
+repos default to `contents: read` only — so the caller must grant the ceiling
+the reusable job needs, or the job fails to start.
+
 ### `.github/workflows/claude.yml`
 
 ```yaml
@@ -17,6 +22,12 @@ on:
   pull_request_review_comment: { types: [created] }
   issues: { types: [opened, assigned] }
   pull_request_review: { types: [submitted] }
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+  id-token: write
+  actions: read
 jobs:
   claude:
     uses: jluszcz/github-utils/.github/workflows/claude.yml@v1
@@ -30,6 +41,11 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
+permissions:
+  contents: read
+  pull-requests: write
+  issues: read
+  id-token: write
 jobs:
   claude-review:
     uses: jluszcz/github-utils/.github/workflows/claude-code-review.yml@v1
@@ -43,6 +59,9 @@ name: Auto-Merge
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+permissions:
+  contents: write
+  pull-requests: write
 jobs:
   auto-merge:
     uses: jluszcz/github-utils/.github/workflows/auto-merge.yml@v1
