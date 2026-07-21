@@ -1,6 +1,6 @@
 import unittest
 
-from release import build_commands, current_major, resolve_target
+from release import build_commands, current_major, parse_args, resolve_target
 
 
 class CurrentMajorTest(unittest.TestCase):
@@ -48,6 +48,27 @@ class BuildCommandsTest(unittest.TestCase):
                 ["git", "push", "origin", "v2"],
             ],
         )
+
+
+class ParseArgsTest(unittest.TestCase):
+    def test_message_required(self):
+        with self.assertRaises(SystemExit):
+            parse_args([])
+
+    def test_defaults(self):
+        ns = parse_args(["-m", "v1: fix"])
+        self.assertEqual(ns.message, "v1: fix")
+        self.assertFalse(ns.breaking)
+        self.assertFalse(ns.dry_run)
+        self.assertFalse(ns.yes)
+        self.assertEqual(ns.remote, "origin")
+        self.assertEqual(ns.branch, "main")
+
+    def test_breaking_and_flags(self):
+        ns = parse_args(["-m", "v2: break", "--breaking", "--dry-run", "--yes"])
+        self.assertTrue(ns.breaking)
+        self.assertTrue(ns.dry_run)
+        self.assertTrue(ns.yes)
 
 
 if __name__ == "__main__":
