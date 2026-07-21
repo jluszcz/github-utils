@@ -130,3 +130,62 @@ jobs:
     uses: jluszcz/github-utils/.github/workflows/auto-merge.yml@v1
     secrets: inherit
 ```
+
+### `.github/workflows/ci.yml` (Rust)
+
+```yaml
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  ci:
+    uses: jluszcz/github-utils/.github/workflows/rust-ci.yml@v1
+    # with:                            # all optional
+    #   runs-on: ubuntu-24.04-arm      # default ubuntu-latest
+    #   target: aarch64-unknown-linux-musl
+    #   all-features: true
+```
+
+### `.github/workflows/ci.yml` (Node)
+
+```yaml
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  ci:
+    uses: jluszcz/github-utils/.github/workflows/node-ci.yml@v1
+    # with:
+    #   node-version: '22'             # default
+```
+
+Consumers must define a `build` script in `package.json` (the workflow always
+runs `npm run build`).
+
+### `.github/workflows/ci.yml` (Python)
+
+```yaml
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  ci:
+    uses: jluszcz/github-utils/.github/workflows/python-ci.yml@v1
+```
+
+Consumers must use `uv` (with `uv.lock`) and a `.pre-commit-config.yaml`.
