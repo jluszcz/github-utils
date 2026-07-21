@@ -265,14 +265,14 @@ git push -u origin lambda-deploy-migration
 gh pr create --fill
 ```
 - [ ] **Step 2: Confirm CI green.** `gh pr checks --watch` → `Lint Workflows` passes (actionlint over the two new files). Merge when green (`gh pr merge --squash` if auto-merge doesn't fire).
-- [ ] **Step 3: Move `v1`.**
+- [ ] **Step 3: Move `v1`** using the repo's release script (per `CLAUDE.md` — do NOT hand-tag). It tags `origin/main`'s tip:
 ```bash
 cd github-utils
 git checkout main && git pull
-git tag -fa v1 -m "v1: add lambda-package and deploy-lambda workflows"
-git push --force origin v1
+scripts/release.py --dry-run -m "v1: add lambda-package and deploy-lambda workflows"   # preview
+scripts/release.py -m "v1: add lambda-package and deploy-lambda workflows"
 ```
-- [ ] **Step 4: Verify.** `git ls-tree --name-only v1 .github/workflows/` includes `lambda-package.yml` and `deploy-lambda.yml`.
+- [ ] **Step 4: Verify.** `git fetch --tags --force origin && git ls-tree --name-only v1 .github/workflows/` includes `lambda-package.yml` and `deploy-lambda.yml`.
 
 ---
 
