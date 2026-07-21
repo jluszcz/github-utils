@@ -1,0 +1,48 @@
+name: Deploy Lambda
+
+on:
+  workflow_call:
+    inputs:
+      aws-region:
+        required: true
+        type: string
+      project:
+        required: true
+        type: string
+      regional:
+        description: Append .${aws-region} to the IAM role name
+        type: boolean
+        default: false
+
+    secrets:
+      aws-account-id:
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_BUCKET: code-${{ secrets.aws-account-id }}-${{ inputs.aws-region }}-an
+      PROJECT: ${{ inputs.project }}
+
+    steps:
+      - name: Download Package
+        uses: actions/download-artifact@v8
+        with:
+          name: package
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6.2.1
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.aws-account-id }}:role/${{ inputs.project }}.github-deploy${{ inputs.regional && format('.{0}', inputs.aws-region) || '' }}
+          role-session-name: github-deploy
+          aws-region: ${{ inputs.aws-region }}
+
+      - name: Deploy Lambda
+        run: aws s3 cp "$PROJECT.zip" "s3://$AWS_BUCKET/"
