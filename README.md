@@ -13,7 +13,10 @@ repos): no branch deletion, no force-push, linear history required, and all
 changes land via PR (0 required approvals, squash/rebase merges only).
 
 The one required status check is **`Lint Workflows`** — `actionlint` over
-`.github/workflows/**` (see `.github/workflows/ci.yml`). The reusable Claude
+`.github/workflows/**` (see `.github/workflows/ci.yml`). That same `ci.yml` also
+runs a **`Python`** job that dogfoods this repo's own `python-ci.yml` (via a
+local `./` ref) over `scripts/` — so the release tooling is tested with the same
+`uv` + `pytest` + `pre-commit` stack consumers get. The reusable Claude
 workflows are intentionally not dogfooded here: they need a
 `CLAUDE_CODE_OAUTH_TOKEN` secret this repo doesn't carry, and the review action
 skips whenever a PR changes a workflow file — which most PRs here do.

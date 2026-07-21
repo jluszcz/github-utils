@@ -60,8 +60,12 @@ def parse_args(argv):
     parser.add_argument(
         "--yes", action="store_true", help="Skip the confirmation prompt."
     )
-    parser.add_argument("--remote", default="origin", help="Remote name (default: origin).")
-    parser.add_argument("--branch", default="main", help="Branch to tag (default: main).")
+    parser.add_argument(
+        "--remote", default="origin", help="Remote name (default: origin)."
+    )
+    parser.add_argument(
+        "--branch", default="main", help="Branch to tag (default: main)."
+    )
     return parser.parse_args(argv)
 
 

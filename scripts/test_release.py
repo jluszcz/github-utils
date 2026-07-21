@@ -40,7 +40,9 @@ class BuildCommandsTest(unittest.TestCase):
         )
 
     def test_create_omits_force(self):
-        cmds = build_commands("v2", "abc123", "v2: break", is_move=False, remote="origin")
+        cmds = build_commands(
+            "v2", "abc123", "v2: break", is_move=False, remote="origin"
+        )
         self.assertEqual(
             cmds,
             [
