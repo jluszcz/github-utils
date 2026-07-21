@@ -203,3 +203,48 @@ jobs:
 ```
 
 Consumers must use `uv` (with `uv.lock`) and a `.pre-commit-config.yaml`.
+
+### `.github/workflows/ci.yml` (Rust Lambda: CI + package + deploy)
+
+```yaml
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  ci:
+    uses: jluszcz/github-utils/.github/workflows/rust-ci.yml@v1
+    with:
+      runs-on: ubuntu-24.04-arm
+      target: aarch64-unknown-linux-musl
+  package:
+    needs: ci
+    if: github.event_name == 'push'
+    uses: jluszcz/github-utils/.github/workflows/lambda-package.yml@v1
+    with:
+      project: my-lambda
+  deploy:
+    needs: package
+    if: github.event_name == 'push'
+    permissions:                 # REQUIRED — id-token is capped by the caller
+      id-token: write
+      contents: read
+    uses: jluszcz/github-utils/.github/workflows/deploy-lambda.yml@v1
+    with:
+      aws-region: us-east-1
+      project: my-lambda
+      # regional: true           # append .${aws-region} to the role name
+    secrets:
+      aws-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+```
+
+`lambda-package.yml` produces `<project>.zip` (from a `lambda` binary) as artifact
+`package`. `deploy-lambda.yml` assumes `${project}.github-deploy` (or
+`${project}.github-deploy.${region}` when `regional: true`) and copies the zip to
+`s3://code-${account}-${region}-an/`. Each `deploy-*` job **must** grant
+`id-token: write` and pass the `aws-account-id` secret. Repeat the `deploy` job
+per region for multi-region repos.
