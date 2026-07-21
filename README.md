@@ -31,16 +31,21 @@ change is backward-compatible.
 ### Patch / minor — move `v1`
 
 Backward-compatible fixes (version bumps, condition tweaks, new *optional*
-inputs) reuse the existing major tag. After merging the change to `main`:
+inputs) reuse the existing major tag. Record the change in `CHANGELOG.md` in the
+same PR (see `CLAUDE.md`). After merging to `main`, cut the release:
 
 ```bash
-git checkout main && git pull
-git tag -fa v1 -m "v1: <what changed>"   # -f re-points the existing tag
-git push --force origin v1
+scripts/release.py -m "v1: <what changed>"
 ```
 
-Every consumer picks it up on its next run. Record the move in `CHANGELOG.md` in
-the same PR as the change.
+The script fetches `origin/main`, moves `v1` to its tip, and force-pushes the
+tag; every consumer picks it up on its next run. Preview with `--dry-run`. Under
+the hood it runs:
+
+```bash
+git tag -fa v1 <origin/main sha> -m "v1: <what changed>"   # -f re-points the tag
+git push --force origin v1
+```
 
 ### Breaking — cut `v2`
 
@@ -49,8 +54,14 @@ renamed job/status-check) get a new major tag so pinned `@v1` consumers keep
 working:
 
 ```bash
-git checkout main && git pull
-git tag -a v2 -m "v2: <what changed>"
+scripts/release.py --breaking -m "v2: <what changed>"
+```
+
+The script creates the next major tag (`v2`) on `origin/main`'s tip and pushes
+it (no force — it's a new tag). Under the hood:
+
+```bash
+git tag -a v2 <origin/main sha> -m "v2: <what changed>"
 git push origin v2
 ```
 
