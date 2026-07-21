@@ -1,0 +1,54 @@
+name: Lambda Package
+
+on:
+  workflow_call:
+    inputs:
+      project:
+        description: Project name; produces <project>.zip
+        required: true
+        type: string
+      target:
+        description: Rust target triple
+        type: string
+        default: aarch64-unknown-linux-musl
+      runs-on:
+        description: Runner label to execute on
+        type: string
+        default: ubuntu-24.04-arm
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package
+    runs-on: ${{ inputs.runs-on }}
+
+    env:
+      TARGET: ${{ inputs.target }}
+      PROJECT: ${{ inputs.project }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Update and Configure Rust
+        run: |
+          sudo apt-get install -y musl-tools
+          rustup target add "$TARGET"
+          rustup update
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Package
+        run: |
+          cargo build --release --target "$TARGET"
+          cp "target/$TARGET/release/lambda" bootstrap
+          zip -j "$PROJECT.zip" bootstrap
+
+      - name: Upload Package
+        uses: actions/upload-artifact@v7
+        with:
+          name: package
+          path: ${{ inputs.project }}.zip
+          retention-days: 1

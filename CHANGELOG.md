@@ -1,5 +1,12 @@
 # Changelog
 
+## v1 — 2026-07-21 (Lambda package + deploy)
+
+Added reusable `lambda-package.yml` (release build + zip + upload) and
+`deploy-lambda.yml` (OIDC assume-role + `s3 cp`). Deploy role standardized to
+`${project}.github-deploy` with an optional `.${region}` suffix (`regional`
+input). Additive — no change to existing callers.
+
 ## v1 — 2026-07-20 (CI workflows)
 
 Added reusable `rust-ci.yml`, `node-ci.yml`, and `python-ci.yml`. Each defines a
