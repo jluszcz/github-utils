@@ -4,6 +4,7 @@ or cut the next major with --breaking."""
 
 import argparse
 import re
+import shlex
 import subprocess
 import sys
 
@@ -69,7 +70,11 @@ def main(argv=None):
 
     # 1. Fetch so the tag lands on the true remote tip.
     print(f"Fetching {args.remote}/{args.branch}...")
-    git_output(["fetch", args.remote, args.branch])
+    try:
+        git_output(["fetch", args.remote, args.branch])
+    except subprocess.CalledProcessError:
+        print(f"error: git fetch {args.remote} {args.branch} failed", file=sys.stderr)
+        return 1
 
     # 2. Resolve the remote tip SHA.
     ref = f"{args.remote}/{args.branch}"
@@ -97,7 +102,7 @@ def main(argv=None):
     print(f"\n{action} tag {tag} -> {ref} ({sha[:12]})")
     print(f"  message: {args.message}")
     for cmd in commands:
-        print("  $ " + " ".join(cmd))
+        print("  $ " + shlex.join(cmd))
 
     if args.dry_run:
         print("\n--dry-run: nothing executed.")
@@ -110,8 +115,12 @@ def main(argv=None):
             print("Aborted.")
             return 1
 
-    for cmd in commands:
-        subprocess.run(cmd, check=True)
+    try:
+        for cmd in commands:
+            subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError:
+        print(f"error: command failed: {shlex.join(cmd)}", file=sys.stderr)
+        return 1
 
     print(f"\nReleased {tag}.")
     return 0
