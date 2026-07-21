@@ -27,3 +27,7 @@ jobs:
 
       - name: actionlint
         uses: raven-actions/actionlint@v2
+
+  python:
+    name: Python
+    uses: ./.github/workflows/python-ci.yml
