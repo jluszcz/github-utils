@@ -61,15 +61,57 @@ Two new reusable `workflow_call` workflows in `github-utils/.github/workflows/`,
 composed with the existing `rust-ci.yml@v1`. Each Lambda repo's `ci.yml` becomes
 three job types:
 
+Concrete caller (mbtalerts — single region, `regional: false`):
+
 ```yaml
 jobs:
-  ci:                # rust-ci.yml@v1 — build/test/lint; runs on push AND pull_request
-  package:           # lambda-package.yml@v1 — needs: ci, if: push
-  deploy-<region>:   # deploy-lambda.yml@v1 — needs: package, if: push, per region
+  ci:
+    uses: jluszcz/github-utils/.github/workflows/rust-ci.yml@v1
+    with:
+      runs-on: ubuntu-24.04-arm
+      target: aarch64-unknown-linux-musl
+
+  package:
+    needs: ci
+    if: github.event_name == 'push'
+    uses: jluszcz/github-utils/.github/workflows/lambda-package.yml@v1
+    with:
+      project: mbtalerts
+
+  deploy:
+    needs: package
+    if: github.event_name == 'push'
+    permissions:            # REQUIRED on the caller job — see below
+      id-token: write
+      contents: read
+    uses: jluszcz/github-utils/.github/workflows/deploy-lambda.yml@v1
+    with:
+      aws-region: us-east-2
+      project: mbtalerts
+    secrets:
+      aws-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
 ```
+
+Multi-region repos (LambdUpdate, LogStreamGC) repeat the `deploy` job once per
+region as `deploy-us-east-1` / `deploy-us-east-2`, each with `regional: true`.
 
 `package` and `deploy-*` are whole-job `if: github.event_name == 'push'`, so on a
 PR only `ci` runs (deploy plumbing cannot be exercised from a PR — see Rollout).
+
+**Caller responsibilities (these fail only on the post-merge push, never on a
+PR):**
+
+- **`permissions` on each `deploy-*` job MUST include `id-token: write`** (plus
+  `contents: read`). A called reusable workflow's `GITHUB_TOKEN` permissions are
+  set by the caller and can only be *restricted* by the callee — `id-token` is
+  not in the default token set, so `deploy-lambda.yml`'s own
+  `permissions: id-token: write` is capped to `none` unless the caller grants it,
+  and OIDC role assumption then fails. The caller workflow's top-level
+  `permissions: contents: read` does **not** cover this; the grant must be on the
+  deploy job. (`ci` and `package` need no extra permissions.)
+- **Each `deploy-*` job passes `secrets: { aws-account-id: ${{ secrets.AWS_ACCOUNT_ID }} }`**
+  (or `secrets: inherit`) — the reusable declares the secret but the caller must
+  supply it.
 
 ### `lambda-package.yml`
 
@@ -127,8 +169,8 @@ The `ci` job uses `rust-ci.yml@v1` with `runs-on: ubuntu-24.04-arm`,
 `on:`/`permissions` block. LambdUpdate & LogStreamGC delete their local
 `deploy-lambda.yml`. ListOfLists drops its `AWS_DEFAULT_REGION` secret usage
 (region hardcoded to us-east-2 — confirm this matches the current secret). The
-vestigial `id-token: write` on JakeSky/mbtalerts' old build job is dropped (only
-deploy jobs need it).
+vestigial `id-token: write` on JakeSky/mbtalerts' old build job is dropped — it
+belongs only on the caller's `deploy-*` jobs (see Caller responsibilities above).
 
 ## IAM change (per-repo Terraform)
 
