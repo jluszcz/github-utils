@@ -9,6 +9,15 @@ import subprocess
 import sys
 
 _VERSION_RE = re.compile(r"^v(\d+)$")
+_MESSAGE_PREFIX_RE = re.compile(r"^v\d+\s*:")
+
+
+def has_version_prefix(message):
+    return bool(_MESSAGE_PREFIX_RE.match(message))
+
+
+def format_message(tag, message):
+    return f"{tag}: {message}"
 
 
 def current_major(tags):
@@ -46,7 +55,12 @@ def git_output(args):
 
 def parse_args(argv):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("-m", "--message", required=True, help="Annotated-tag message.")
+    parser.add_argument(
+        "-m",
+        "--message",
+        required=True,
+        help="Annotated-tag message, without the 'vN:' prefix (added automatically).",
+    )
     parser.add_argument(
         "--breaking",
         action="store_true",
@@ -71,6 +85,13 @@ def parse_args(argv):
 
 def main(argv=None):
     args = parse_args(argv)
+
+    if has_version_prefix(args.message):
+        print(
+            "error: -m message must not include a 'vN:' prefix (added automatically)",
+            file=sys.stderr,
+        )
+        return 1
 
     # 1. Fetch so the tag lands on the true remote tip.
     print(f"Fetching {args.remote}/{args.branch}...")
@@ -99,12 +120,13 @@ def main(argv=None):
         return 1
 
     tag, is_move = resolve_target(current, args.breaking)
-    commands = build_commands(tag, sha, args.message, is_move, args.remote)
+    message = format_message(tag, args.message)
+    commands = build_commands(tag, sha, message, is_move, args.remote)
 
     # 4. Summarize.
     action = "MOVE (force)" if is_move else "CREATE"
     print(f"\n{action} tag {tag} -> {ref} ({sha[:12]})")
-    print(f"  message: {args.message}")
+    print(f"  message: {message}")
     for cmd in commands:
         print("  $ " + shlex.join(cmd))
 

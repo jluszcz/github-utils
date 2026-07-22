@@ -20,7 +20,10 @@ so the changelog must already be correct at release time.
 After the PR is merged, cut the release with the script (it tags `origin/main`'s
 tip):
 
-- Backward-compatible: `scripts/release.py -m "v1: <what changed>"`
-- Breaking: `scripts/release.py --breaking -m "v2: <what changed>"`
+- Backward-compatible: `scripts/release.py -m "<what changed>"`
+- Breaking: `scripts/release.py --breaking -m "<what changed>"`
+
+The script prepends the `vN:` tag prefix to the message itself; passing a
+message that already starts with `vN:` is rejected.
 
 Preview with `--dry-run`. See `README.md` → "Releasing changes" for details.

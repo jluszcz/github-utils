@@ -1,6 +1,13 @@
 import unittest
 
-from release import build_commands, current_major, parse_args, resolve_target
+from release import (
+    build_commands,
+    current_major,
+    format_message,
+    has_version_prefix,
+    parse_args,
+    resolve_target,
+)
 
 
 class CurrentMajorTest(unittest.TestCase):
@@ -52,14 +59,36 @@ class BuildCommandsTest(unittest.TestCase):
         )
 
 
+class HasVersionPrefixTest(unittest.TestCase):
+    def test_rejects_version_prefix(self):
+        self.assertTrue(has_version_prefix("v1: fix"))
+
+    def test_rejects_prefix_without_space(self):
+        self.assertTrue(has_version_prefix("v2:break"))
+
+    def test_rejects_prefix_with_padding(self):
+        self.assertTrue(has_version_prefix("v10 : fix"))
+
+    def test_allows_plain_message(self):
+        self.assertFalse(has_version_prefix("fix the thing"))
+
+    def test_allows_v_word_without_colon(self):
+        self.assertFalse(has_version_prefix("version bump"))
+
+
+class FormatMessageTest(unittest.TestCase):
+    def test_prepends_tag(self):
+        self.assertEqual(format_message("v1", "fix the thing"), "v1: fix the thing")
+
+
 class ParseArgsTest(unittest.TestCase):
     def test_message_required(self):
         with self.assertRaises(SystemExit):
             parse_args([])
 
     def test_defaults(self):
-        ns = parse_args(["-m", "v1: fix"])
-        self.assertEqual(ns.message, "v1: fix")
+        ns = parse_args(["-m", "fix"])
+        self.assertEqual(ns.message, "fix")
         self.assertFalse(ns.breaking)
         self.assertFalse(ns.dry_run)
         self.assertFalse(ns.yes)
@@ -67,7 +96,7 @@ class ParseArgsTest(unittest.TestCase):
         self.assertEqual(ns.branch, "main")
 
     def test_breaking_and_flags(self):
-        ns = parse_args(["-m", "v2: break", "--breaking", "--dry-run", "--yes"])
+        ns = parse_args(["-m", "break", "--breaking", "--dry-run", "--yes"])
         self.assertTrue(ns.breaking)
         self.assertTrue(ns.dry_run)
         self.assertTrue(ns.yes)
