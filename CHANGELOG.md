@@ -1,5 +1,17 @@
 # Changelog
 
+## v1 — 2026-07-22 (Hardening + concurrency)
+
+Pinned all third-party actions to commit SHAs (`Swatinem/rust-cache`,
+`raven-actions/actionlint`, `astral-sh/setup-uv`, `aws-actions/configure-aws-credentials`,
+`anthropics/claude-code-action`); first-party `actions/*` stay on major tags.
+Added `concurrency` (cancel superseded runs, latest wins) to `rust-ci`,
+`node-ci`, `python-ci`, `lambda-package`, and `deploy-lambda`. `python-ci` now
+enables the uv cache. Rust toolchain setup runs
+`apt-get update` before installing `musl-tools`, and `lambda-package` reorders
+`rustup update` before `rustup target add` to match `rust-ci`. Additive — no
+change to caller inputs or job names.
+
 ## v1 — 2026-07-21 (Lambda package + deploy)
 
 Added reusable `lambda-package.yml` (release build + zip + upload) and

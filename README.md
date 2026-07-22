@@ -38,12 +38,13 @@ inputs) reuse the existing major tag. Record the change in `CHANGELOG.md` in the
 same PR (see `CLAUDE.md`). After merging to `main`, cut the release:
 
 ```bash
-scripts/release.py -m "v1: <what changed>"
+scripts/release.py -m "<what changed>"
 ```
 
-The script fetches `origin/main`, moves `v1` to its tip, and force-pushes the
-tag; every consumer picks it up on its next run. Preview with `--dry-run`. Under
-the hood it runs:
+The script prefixes the message with the target tag (so the message must *not*
+start with a `vN:` prefix — the script rejects it). It fetches `origin/main`,
+moves `v1` to its tip, and force-pushes the tag; every consumer picks it up on
+its next run. Preview with `--dry-run`. Under the hood it runs:
 
 ```bash
 git tag -fa v1 <origin/main sha> -m "v1: <what changed>"   # -f re-points the tag
@@ -57,7 +58,7 @@ renamed job/status-check) get a new major tag so pinned `@v1` consumers keep
 working:
 
 ```bash
-scripts/release.py --breaking -m "v2: <what changed>"
+scripts/release.py --breaking -m "<what changed>"
 ```
 
 The script creates the next major tag (`v2`) on `origin/main`'s tip and pushes
@@ -183,8 +184,9 @@ jobs:
     #   node-version: '22'             # default
 ```
 
-Consumers must define a `build` script in `package.json` (the workflow always
-runs `npm run build`).
+The workflow runs `npm ci` then `npm run build`, `npm test`, `npm run lint`, and
+`npm run format:check`. Consumers must define all four scripts (`build`, `test`,
+`lint`, `format:check`) in `package.json`, or the job fails on the missing one.
 
 ### `.github/workflows/ci.yml` (Python)
 
@@ -202,7 +204,9 @@ jobs:
     uses: jluszcz/github-utils/.github/workflows/python-ci.yml@v1
 ```
 
-Consumers must use `uv` (with `uv.lock`) and a `.pre-commit-config.yaml`.
+Consumers must use `uv` (with `uv.lock`) and a `.pre-commit-config.yaml`. The
+job runs `uv run pytest`, so the repo must contain at least one test — pytest
+exits non-zero ("no tests collected") on an empty suite and fails the job.
 
 ### `.github/workflows/ci.yml` (Rust Lambda: CI + package + deploy)
 
