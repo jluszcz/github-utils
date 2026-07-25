@@ -1,5 +1,12 @@
 # Changelog
 
+## v1 — 2026-07-25 (Disable Claude Code Review)
+
+`claude-code-review.yml`'s review step now always skips (`if: false`); the job
+still succeeds, so the required check keeps passing without commenting on any
+PR. Replaces the prior dependabot/`Deps-*`-only skip. Additive — no change to
+caller inputs or job names.
+
 ## v1 — 2026-07-25 (Fix concurrency group collisions)
 
 Concurrency groups now include the inputs that identify a call. Inside a called
