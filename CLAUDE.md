@@ -3,6 +3,15 @@
 Reusable GitHub Actions workflows shared across `jluszcz` repos. See `README.md`
 for the versioning model and caller examples.
 
+## Concurrency groups include the call's inputs
+
+Inside a called workflow `github.workflow` is the *caller's* workflow name, so it
+does not distinguish two calls made from the same caller. Every reusable
+workflow's `concurrency.group` must also include the inputs that identify the
+call, or those calls share a group and cancel each other. When adding a new
+input that makes one call distinct from another, add it to the group. See
+`README.md` → "Concurrency".
+
 ## Changelog is updated in the PR
 
 Every PR that changes workflow behavior MUST add an entry to `CHANGELOG.md` in

@@ -20,7 +20,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-rust-ci-${{ github.ref }}
+  # Inputs are part of the group — github.workflow is the caller's name, so
+  # calls that differ only by inputs would otherwise cancel each other.
+  group: ${{ github.workflow }}-rust-ci-${{ inputs.runs-on }}-${{ inputs.target }}-${{ inputs.all-features }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

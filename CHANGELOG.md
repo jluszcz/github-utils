@@ -1,5 +1,19 @@
 # Changelog
 
+## v1 — 2026-07-25 (Fix concurrency group collisions)
+
+Concurrency groups now include the inputs that identify a call. Inside a called
+workflow `github.workflow` is the *caller's* workflow name, so two jobs calling
+the same reusable workflow from one caller computed an identical group and, with
+`cancel-in-progress: true`, cancelled each other. This broke multi-region Lambda
+deploys — the exact pattern `README.md` recommends — in `LambdUpdate` and
+`LogStreamGC`, where one region's deploy could be cancelled by the other's.
+
+`deploy-lambda` keys on `project` + `aws-region`, `lambda-package` on `project` +
+`target`, `rust-ci` on `runs-on` + `target` + `all-features`, and `node-ci` on
+`node-version`. `python-ci` takes no inputs and is unchanged. Additive — no
+change to caller inputs or job names.
+
 ## v1 — 2026-07-22 (Hardening + concurrency)
 
 Pinned all third-party actions to commit SHAs (`Swatinem/rust-cache`,

@@ -23,7 +23,10 @@ permissions:
   id-token: write
 
 concurrency:
-  group: ${{ github.workflow }}-deploy-lambda-${{ github.ref }}
+  # Include the inputs that identify the deploy target: in a called workflow
+  # github.workflow is the *caller's* name, so two deploy jobs in one caller
+  # (e.g. per-region) would otherwise share a group and cancel each other.
+  group: ${{ github.workflow }}-deploy-lambda-${{ inputs.project }}-${{ inputs.aws-region }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

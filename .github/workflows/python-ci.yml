@@ -7,6 +7,8 @@ permissions:
   contents: read
 
 concurrency:
+  # No inputs, so a single call per caller is the only sensible use; if inputs
+  # are ever added they must go in this group (see rust-ci.yml).
   group: ${{ github.workflow }}-python-ci-${{ github.ref }}
   cancel-in-progress: true
 
