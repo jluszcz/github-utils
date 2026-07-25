@@ -12,7 +12,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-node-ci-${{ github.ref }}
+  # Inputs are part of the group — github.workflow is the caller's name, so
+  # calls that differ only by inputs would otherwise cancel each other.
+  group: ${{ github.workflow }}-node-ci-${{ inputs.node-version }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

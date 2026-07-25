@@ -91,6 +91,19 @@ permissions cannot exceed the caller's `GITHUB_TOKEN` permissions, and these
 repos default to `contents: read` only — so the caller must grant the ceiling
 the reusable job needs, or the job fails to start.
 
+### Concurrency
+
+Each reusable workflow sets its own `concurrency` group so a superseded run is
+cancelled and the latest wins. The group includes the **inputs that identify the
+call**, not just the workflow name — inside a called workflow `github.workflow`
+resolves to the *caller's* workflow name, so every call from one caller shares
+it. Without the inputs, calling the same reusable workflow twice in one caller
+(e.g. a `deploy` job per region) puts both in one group with
+`cancel-in-progress: true`, and they cancel each other.
+
+Callers need no `concurrency` block of their own. When adding an input that
+distinguishes one call from another, add it to that workflow's group too.
+
 ### `.github/workflows/claude.yml`
 
 ```yaml
@@ -251,4 +264,9 @@ jobs:
 `${project}.github-deploy.${region}` when `regional: true`) and copies the zip to
 `s3://code-${account}-${region}-an/`. Each `deploy-*` job **must** grant
 `id-token: write` and pass the `aws-account-id` secret. Repeat the `deploy` job
-per region for multi-region repos.
+per region for multi-region repos — each region gets its own concurrency group
+(see "Concurrency"), so the regions do not cancel each other.
+
+`lambda-package.yml` always uploads its artifact as `package`, so a caller can
+only run one packaging job per run; a repo with two lambdas needs a change here
+first.

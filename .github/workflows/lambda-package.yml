@@ -20,7 +20,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-lambda-package-${{ github.ref }}
+  # See deploy-lambda.yml: the group must include the inputs that make one call
+  # distinct, since github.workflow is the caller's name for every call.
+  group: ${{ github.workflow }}-lambda-package-${{ inputs.project }}-${{ inputs.target }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
