@@ -6,6 +6,12 @@ on:
       - main
     paths:
       - '.github/workflows/**'
+      # The Python job tests and lints scripts/, so main needs coverage when
+      # those — or the project files the job installs from — change.
+      - 'scripts/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.pre-commit-config.yaml'
 
   pull_request:
     branches:
