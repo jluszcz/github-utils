@@ -20,10 +20,10 @@ jobs:
 
       - name: Run Claude Code Review
         id: claude-review
-        # Disabled by default: job still reports success so the required check
-        # passes. Set the ENABLE_CLAUDE_REVIEW repo/org variable to 'true' to
-        # re-enable.
-        if: vars.ENABLE_CLAUDE_REVIEW == 'true'
+        # Skip dependency PRs; job still reports success so the required check passes
+        if: >
+          github.event.pull_request.user.login != 'dependabot[bot]' &&
+          !(github.event.pull_request.user.login == 'jluszcz' && startsWith(github.event.pull_request.head.ref, 'Deps-'))
         uses: anthropics/claude-code-action@e90deca47693f9457b72f2b53c17d7c445a87342 # v1.0.171
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

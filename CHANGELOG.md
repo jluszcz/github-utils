@@ -1,5 +1,14 @@
 # Changelog
 
+## v1 — 2026-07-26 (Re-enable Claude Code Review)
+
+`claude-code-review.yml` reviews PRs again. The `ENABLE_CLAUDE_REVIEW`
+repo/org variable gate is gone — reverting the previous entry — and the step is
+back to the dependabot/`Deps-*` skip, so every other PR gets a review. The
+variable is no longer read; repos that set it can drop it. Callers that want
+reviews off should stop calling this workflow. No change to caller inputs or job
+names.
+
 ## v1 — 2026-07-25 (Disable Claude Code Review)
 
 `claude-code-review.yml`'s review step now skips by default, gated on the
