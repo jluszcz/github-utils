@@ -1,5 +1,17 @@
 # Changelog
 
+## v1 — 2026-08-01 (Review on open, not on every push)
+
+`claude-code-review.yml`'s review step now skips `synchronize` events, so a PR
+is reviewed when it is opened, reopened, or marked ready for review, but not on
+every follow-up push. As with the dependabot skip, the step is skipped rather
+than the job, so the job still reports success on the new head commit and a
+required status check keeps passing. Callers should keep `synchronize` in their
+`pull_request` trigger types for that reason — no caller change is needed.
+Re-running the job from the Actions UI replays the original event and so still
+skips; to get a review on a later push, comment `@claude review this PR`, which
+`claude.yml` already handles. No change to caller inputs or job names.
+
 ## v1 — 2026-08-01 (Minify and upload)
 
 Added reusable `minify-and-upload.yml`, extracted from the identical
