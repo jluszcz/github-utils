@@ -20,8 +20,17 @@ jobs:
 
       - name: Run Claude Code Review
         id: claude-review
-        # Skip dependency PRs; job still reports success so the required check passes
+        # Review the PR as opened, not every follow-up push: `synchronize` fires
+        # on each push to the branch, and the fixups after an initial review
+        # rarely warrant a second full pass. Callers keep `synchronize` in their
+        # trigger types so the job still runs and reports success on the new head
+        # commit, which a required status check needs. To re-review on demand,
+        # comment `@claude review this PR` — claude.yml picks that up.
+        #
+        # Dependency PRs are skipped entirely. In both cases the step is skipped
+        # rather than the job, so the job still reports success.
         if: >
+          github.event.action != 'synchronize' &&
           github.event.pull_request.user.login != 'dependabot[bot]' &&
           !(github.event.pull_request.user.login == 'jluszcz' && startsWith(github.event.pull_request.head.ref, 'Deps-'))
         uses: anthropics/claude-code-action@be7b93b1907a4abad570368f3c74b6fe3807510b # v1.0.183

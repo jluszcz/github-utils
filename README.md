@@ -143,6 +143,12 @@ jobs:
     secrets: inherit
 ```
 
+Reviews run when the PR is opened, reopened, or marked ready for review — not on
+every subsequent push. Keep `synchronize` in the trigger types anyway: the job
+still runs and reports success on each new head commit, which a required status
+check needs, it just doesn't post another review. To request one on a later push,
+comment `@claude review this PR` on the PR (handled by `claude.yml`).
+
 ### `.github/workflows/auto-merge.yml`
 
 ```yaml
