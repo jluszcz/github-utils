@@ -1,0 +1,62 @@
+name: Minify and Upload
+
+on:
+  workflow_call:
+    inputs:
+      aws-region:
+        required: true
+        type: string
+      project:
+        description: List name; source file is ${project}.json, role is ${project}.github-update
+        required: true
+        type: string
+      s3-key-prefix:
+        description: Destination object key, without the .json suffix
+        required: true
+        type: string
+      bucket-prefix:
+        description: Bucket is ${bucket-prefix}-${account}-${region}-an
+        required: true
+        type: string
+
+    secrets:
+      aws-account-id:
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  # Include the inputs that identify the upload: in a called workflow
+  # github.workflow is the *caller's* name, so two upload jobs in one caller
+  # would otherwise share a group and cancel each other.
+  group: ${{ github.workflow }}-minify-and-upload-${{ inputs.project }}-${{ inputs.aws-region }}-${{ inputs.s3-key-prefix }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  upload:
+    name: Minify and Upload
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_BUCKET: ${{ inputs.bucket-prefix }}-${{ secrets.aws-account-id }}-${{ inputs.aws-region }}-an
+      PROJECT: ${{ inputs.project }}
+      S3_KEY: ${{ inputs.s3-key-prefix }}.json
+
+    steps:
+      - name: Check Out Code
+        uses: actions/checkout@v7
+
+      - name: Minify JSON
+        run: jq --compact-output '.lists |= map(select(.hidden != true))' "$PROJECT.json" > "$PROJECT.min.json"
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.aws-account-id }}:role/${{ inputs.project }}.github-update
+          role-session-name: github-upload
+          aws-region: ${{ inputs.aws-region }}
+
+      - name: Upload to S3
+        run: aws s3 cp "$PROJECT.min.json" "s3://$AWS_BUCKET/$S3_KEY"
