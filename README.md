@@ -270,3 +270,42 @@ per region for multi-region repos — each region gets its own concurrency group
 `lambda-package.yml` always uploads its artifact as `package`, so a caller can
 only run one packaging job per run; a repo with two lambdas needs a change here
 first.
+
+### `.github/workflows/workflow.yml` (minify JSON + upload to S3)
+
+```yaml
+name: Upload to S3
+on:
+  push:
+    branches: [main]
+    paths:
+      - burgerlist.json
+      - .github/workflows/workflow.yml
+permissions:
+  contents: read
+jobs:
+  minify-and-upload-to-s3:
+    permissions:                 # REQUIRED — id-token is capped by the caller
+      id-token: write
+      contents: read
+    uses: jluszcz/github-utils/.github/workflows/minify-and-upload.yml@v1
+    with:
+      aws-region: us-east-2
+      project: burgerlist        # -> burgerlist.json, role burgerlist.github-update
+      s3-key-prefix: burgerl.ist # -> burgerl.ist.json
+      bucket-prefix: list-of-lists
+    secrets:
+      aws-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+```
+
+`minify-and-upload.yml` runs `jq --compact-output '.lists |= map(select(.hidden
+!= true))'` over `${project}.json`, assumes `${project}.github-update`, and
+copies the result to
+`s3://${bucket-prefix}-${account}-${region}-an/${s3-key-prefix}.json`. The `jq`
+filter and the `.github-update` role suffix are fixed — a consumer that needs
+different ones needs a new input here first.
+
+`aws-region` is an input rather than a secret because a reusable workflow's
+`with:` block cannot reference the `secrets` context (only `github`, `needs`,
+`inputs`, `vars`, `matrix`, and `strategy`). Pass the region literally, or from
+a repo/org `vars` entry.

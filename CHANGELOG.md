@@ -1,5 +1,18 @@
 # Changelog
 
+## v1 — 2026-08-01 (Minify and upload)
+
+Added reusable `minify-and-upload.yml`, extracted from the identical
+`workflow.yml` copies in `BurgerList`, `MovieList`, and `StarList`: minify a
+list JSON with `jq`, assume `${project}.github-update` over OIDC, and copy the
+result to `s3://${bucket-prefix}-${account}-${region}-an/${s3-key-prefix}.json`.
+Takes required `aws-region`, `project`, `s3-key-prefix`, and `bucket-prefix`
+inputs plus an `aws-account-id` secret, matching `deploy-lambda.yml`'s shape.
+Callers must grant `id-token: write`. Relative to the per-repo copies it moves
+`actions/checkout` v6 → v7 and `aws-actions/configure-aws-credentials` from the
+mutable `v6.0.0` tag to the SHA pinned at v6.2.3. Additive — no change to
+existing callers.
+
 ## v1 — 2026-07-26 (Re-enable Claude Code Review)
 
 `claude-code-review.yml` reviews PRs again. The `ENABLE_CLAUDE_REVIEW`
