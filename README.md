@@ -240,14 +240,14 @@ permissions:
   contents: read
 jobs:
   ci:
-    uses: jluszcz/github-utils/.github/workflows/rust-ci.yml@v1
+    uses: jluszcz/github-utils/.github/workflows/rust-ci.yml@v2
     with:
       runs-on: ubuntu-24.04-arm
       target: aarch64-unknown-linux-musl
   package:
     needs: ci
     if: github.event_name == 'push'
-    uses: jluszcz/github-utils/.github/workflows/lambda-package.yml@v1
+    uses: jluszcz/github-utils/.github/workflows/lambda-package.yml@v2
     with:
       project: my-lambda
   deploy:
@@ -256,7 +256,7 @@ jobs:
     permissions:                 # REQUIRED — id-token is capped by the caller
       id-token: write
       contents: read
-    uses: jluszcz/github-utils/.github/workflows/deploy-lambda.yml@v1
+    uses: jluszcz/github-utils/.github/workflows/deploy-lambda.yml@v2
     with:
       aws-region: us-east-1
       project: my-lambda
@@ -267,11 +267,15 @@ jobs:
 
 `lambda-package.yml` produces `<project>.zip` (from a `lambda` binary) as artifact
 `package`. `deploy-lambda.yml` assumes `${project}.github-deploy` (or
-`${project}.github-deploy.${region}` when `regional: true`) and copies the zip to
-`s3://code-${account}-${region}-an/`. Each `deploy-*` job **must** grant
-`id-token: write` and pass the `aws-account-id` secret. Repeat the `deploy` job
-per region for multi-region repos — each region gets its own concurrency group
-(see "Concurrency"), so the regions do not cancel each other.
+`${project}.github-deploy.${region}` when `regional: true`), copies the zip to
+`s3://code-${account}-${region}-an/`, then calls `UpdateFunctionCode` on the
+function named by `project` and waits for it to go active. The role therefore
+needs three permissions: `s3:PutObject` on the object, and
+`lambda:UpdateFunctionCode` plus `lambda:GetFunction` (which backs the waiter) on
+the function. Each `deploy-*` job **must** grant `id-token: write` and pass the
+`aws-account-id` secret. Repeat the `deploy` job per region for multi-region
+repos — each region gets its own concurrency group (see "Concurrency"), so the
+regions do not cancel each other.
 
 `lambda-package.yml` always uploads its artifact as `package`, so a caller can
 only run one packaging job per run; a repo with two lambdas needs a change here

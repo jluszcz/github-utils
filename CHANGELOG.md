@@ -1,5 +1,24 @@
 # Changelog
 
+## v2 — 2026-08-02 (Deploy updates the function)
+
+`deploy-lambda.yml` now calls `UpdateFunctionCode` after copying the zip to the
+code bucket, and waits for the function to go active, so a failed deploy reddens
+CI instead of surfacing as a log line in someone else's Lambda. It retries
+`ResourceConflictException` up to three times with 1s/2s backoff and fails
+immediately on anything else.
+
+**Breaking:** the `${project}.github-deploy` role now needs
+`lambda:UpdateFunctionCode` and `lambda:GetFunction` on the target function in
+addition to `s3:PutObject`. Grant those before bumping a caller's pin to `@v2`.
+The function name is `project`; callers whose function is named differently need
+a change here first.
+
+This retires `LambdUpdate`, the Lambda that watched the code bucket for `.zip`
+objects and called `UpdateFunctionCode` on the caller's behalf. Its
+`function.names` object-metadata fan-out — one artifact updating several
+functions — has no replacement, because no caller ever used it.
+
 ## v1 — 2026-08-01 (Review on open, not on every push)
 
 `claude-code-review.yml`'s review step now skips `synchronize` events, so a PR
