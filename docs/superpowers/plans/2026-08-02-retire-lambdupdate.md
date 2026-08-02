@@ -18,6 +18,7 @@
 - **A concurrency group must include any new input that distinguishes one call.** This plan adds no inputs, so `deploy-lambda.yml`'s group is unchanged. (`github-utils/CLAUDE.md`)
 - **Every github-utils PR that changes workflow behavior adds a `CHANGELOG.md` entry** in the same PR, heading `## vN — YYYY-MM-DD (short title)`. (`github-utils/CLAUDE.md`)
 - **Retry only on `ResourceConflictException`.** Any other failure exits on the first attempt with its real error.
+- **Each deploy role needs four permissions, not three: `s3:PutObject`, `s3:GetObject`, `lambda:UpdateFunctionCode`, `lambda:GetFunction`.** `update-function-code` with an S3 source has Lambda fetch the artifact using the *caller's* credentials, not the function's execution role, so `s3:GetObject` on the artifact belongs on the same statement as `s3:PutObject` in Tasks 1–4. This was missed in an earlier version of this plan and surfaced by a real deploy's `AccessDeniedException`.
 - **Function name == `inputs.project`** for all callers. No `function-name` input is added.
 - **Steps marked [you] need real credentials or GitHub admin** — Terraform applies read secrets from your environment (`mbtalerts` and `JakeSky-rs` require `TF_VAR_*` values not in the repo), `release.py` pushes tags, and archiving needs repo admin. An agent executing this plan must stop and hand those to you rather than guess.
 
@@ -53,7 +54,7 @@ Tasks 1–4 are independent of each other and can run in any order. Task 5 depen
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: the `log-stream-gc.github-deploy.<region>` role can call `UpdateFunctionCode` and `GetFunction` on `arn:aws:lambda:<region>:<account>:function:log-stream-gc`. Task 6 depends on this being applied in **both** regions.
+- Produces: the `log-stream-gc.github-deploy.<region>` role can call `UpdateFunctionCode` and `GetFunction` on `arn:aws:lambda:<region>:<account>:function:log-stream-gc`, and `GetObject` on its own artifact in the code bucket. Task 6 depends on this being applied in **both** regions.
 
 - [ ] **Step 1: Add the statement**
 
@@ -72,8 +73,10 @@ Make it:
 
 ```hcl
 data "aws_iam_policy_document" "github" {
+  # GetObject: update-function-code with an S3 source has Lambda fetch the
+  # object using these credentials, not the function's execution role.
   statement {
-    actions   = ["s3:PutObject"]
+    actions   = ["s3:PutObject", "s3:GetObject"]
     resources = ["${data.aws_s3_bucket.code_bucket.arn}/log-stream-gc.zip"]
   }
 
@@ -93,7 +96,7 @@ cd /Users/jacob/Documents/Programs/LogStreamGC
 terraform plan
 ```
 
-Expected: exactly one change — `aws_iam_policy.github_deploy` updated in place, its `policy` JSON gaining a statement with `lambda:UpdateFunctionCode` and `lambda:GetFunction`. **No** other resource added, changed, or destroyed. If the plan wants to touch `aws_lambda_function` or anything else, stop — the working tree has drifted.
+Expected: exactly one change — `aws_iam_policy.github_deploy` updated in place, its `policy` JSON gaining `s3:GetObject` on the existing `s3:PutObject` statement and a new statement with `lambda:UpdateFunctionCode` and `lambda:GetFunction`. **No** other resource added, changed, or destroyed. If the plan wants to touch `aws_lambda_function` or anything else, stop — the working tree has drifted.
 
 - [ ] **Step 3: Apply both regions [you]**
 
@@ -111,7 +114,7 @@ aws iam get-policy-version \
   --query 'PolicyVersion.Document'
 ```
 
-Expected: the decoded document lists `lambda:UpdateFunctionCode` and `lambda:GetFunction`. Repeat with `.us-east-2` for the second region.
+Expected: the decoded document lists `s3:GetObject` alongside `s3:PutObject`, and `lambda:UpdateFunctionCode` and `lambda:GetFunction`. Repeat with `.us-east-2` for the second region.
 
 - [ ] **Step 5: Commit**
 
@@ -138,7 +141,7 @@ Nothing uses the grant until this repo's pin moves to `@v2` in Task 6, so this i
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `list-of-lists.github-deploy` can call `UpdateFunctionCode`/`GetFunction` on the `list-of-lists` function. Task 9 depends on it.
+- Produces: `list-of-lists.github-deploy` can call `UpdateFunctionCode`/`GetFunction` on the `list-of-lists` function, and `GetObject` on its own artifact in the code bucket. Task 9 depends on it.
 
 Note: this repo's document is named `github_deploy` (not `github` like the others), the function resource is `aws_lambda_function.lambda`, and Terraform runs from inside `shared/` with a `.envrc` — there are no workspaces and no `env-*` scripts.
 
@@ -148,8 +151,10 @@ In `shared/main.tf`, under the `# GitHub Actions: deploy Lambda code` comment:
 
 ```hcl
 data "aws_iam_policy_document" "github_deploy" {
+  # GetObject: update-function-code with an S3 source has Lambda fetch the
+  # object using these credentials, not the function's execution role.
   statement {
-    actions   = ["s3:PutObject"]
+    actions   = ["s3:PutObject", "s3:GetObject"]
     resources = ["${data.aws_s3_bucket.code_bucket.arn}/list-of-lists.zip"]
   }
 
@@ -199,14 +204,16 @@ confirms the new code went active.
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `mbtalerts.github-deploy` can call `UpdateFunctionCode`/`GetFunction` on the `mbtalerts` function. Task 8 depends on it.
+- Produces: `mbtalerts.github-deploy` can call `UpdateFunctionCode`/`GetFunction` on the `mbtalerts` function, and `GetObject` on its own artifact in the code bucket. Task 8 depends on it.
 
 - [ ] **Step 1: Add the statement**
 
 ```hcl
 data "aws_iam_policy_document" "github" {
+  # GetObject: update-function-code with an S3 source has Lambda fetch the
+  # object using these credentials, not the function's execution role.
   statement {
-    actions   = ["s3:PutObject"]
+    actions   = ["s3:PutObject", "s3:GetObject"]
     resources = ["${data.aws_s3_bucket.code_bucket.arn}/mbtalerts.zip"]
   }
 
@@ -258,14 +265,16 @@ confirms the new code went active.
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `jakesky.github-deploy` can call `UpdateFunctionCode`/`GetFunction` on the `jakesky` function. Task 7 depends on it.
+- Produces: `jakesky.github-deploy` can call `UpdateFunctionCode`/`GetFunction` on the `jakesky` function, and `GetObject` on its own artifact in the code bucket. Task 7 depends on it.
 
 - [ ] **Step 1: Add the statement**
 
 ```hcl
 data "aws_iam_policy_document" "github" {
+  # GetObject: update-function-code with an S3 source has Lambda fetch the
+  # object using these credentials, not the function's execution role.
   statement {
-    actions   = ["s3:PutObject"]
+    actions   = ["s3:PutObject", "s3:GetObject"]
     resources = ["${data.aws_s3_bucket.code_bucket.arn}/jakesky.zip"]
   }
 

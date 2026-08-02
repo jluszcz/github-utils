@@ -9,10 +9,16 @@ CI instead of surfacing as a log line in someone else's Lambda. It retries
 immediately on anything else.
 
 **Breaking:** the `${project}.github-deploy` role now needs
-`lambda:UpdateFunctionCode` and `lambda:GetFunction` on the target function in
-addition to `s3:PutObject`. Grant those before bumping a caller's pin to `@v2`.
-The function name is `project`; callers whose function is named differently need
-a change here first.
+`lambda:UpdateFunctionCode` and `lambda:GetFunction` on the target function, and
+`s3:GetObject` in addition to `s3:PutObject` on the artifact object —
+`update-function-code` with an S3 source has Lambda fetch the object using the
+caller's credentials, not the function's execution role. Grant all four before
+bumping a caller's pin to `@v2`. The function name is `project`; callers whose
+function is named differently need a change here first.
+
+(This requirement was initially documented as three permissions, missing
+`s3:GetObject`; a real deploy's `AccessDeniedException` surfaced the gap and
+this entry was corrected in place.)
 
 This retires `LambdUpdate`, the Lambda that watched the code bucket for `.zip`
 objects and called `UpdateFunctionCode` on the caller's behalf. Its
