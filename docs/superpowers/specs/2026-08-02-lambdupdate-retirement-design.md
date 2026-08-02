@@ -120,6 +120,19 @@ existing GitHub-deploy policy document:
   }
 ```
 
+The existing `s3:PutObject` statement also needs `s3:GetObject` added to its
+`actions` list. `aws lambda update-function-code --s3-bucket/--s3-key` has
+Lambda fetch the artifact using the *caller's* credentials, not the function's
+execution role, so the role doing the deploy — not just the function being
+updated — must be able to read the object it just wrote.
+
+This was missed in the original version of this design: LambdUpdate's own
+`s3` policy (`lambdupdate.tf:76-81`) already holds `s3:GetObject` on the code
+bucket, because it was LambdUpdate calling `UpdateFunctionCode` and so
+LambdUpdate that needed to read the object. Moving the API call to the
+caller's role in this design moves that read requirement with it — a detail
+this design missed until a real deploy hit `AccessDeniedException`.
+
 | Repo | File | Policy document | Function resource |
 |---|---|---|---|
 | LogStreamGC | `log-stream-gc.tf` | `github` | `aws_lambda_function.log_stream_gc` |

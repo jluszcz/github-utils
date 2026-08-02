@@ -270,7 +270,9 @@ jobs:
 `${project}.github-deploy.${region}` when `regional: true`), copies the zip to
 `s3://code-${account}-${region}-an/`, then calls `UpdateFunctionCode` on the
 function named by `project` and waits for it to go active. The role therefore
-needs three permissions: `s3:PutObject` on the object, and
+needs four permissions: `s3:PutObject` on the object; `s3:GetObject` on the same
+object, because `update-function-code` with an S3 source has Lambda fetch the
+object using the *caller's* credentials, not the function's execution role; and
 `lambda:UpdateFunctionCode` plus `lambda:GetFunction` (which backs the waiter) on
 the function. Each `deploy-*` job **must** grant `id-token: write` and pass the
 `aws-account-id` secret. Repeat the `deploy` job per region for multi-region
