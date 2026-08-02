@@ -202,7 +202,8 @@ preserve.
 - **`github-utils/README.md`** — the `deploy-lambda.yml` paragraph currently
   ends at "copies the zip to `s3://code-${account}-${region}-an/`". It must say
   the workflow then updates the function, and that the role needs
-  `s3:PutObject`, `lambda:UpdateFunctionCode`, and `lambda:GetFunction`.
+  `s3:PutObject`, `s3:GetObject`, `lambda:UpdateFunctionCode`, and
+  `lambda:GetFunction`.
 - **`github-utils/CHANGELOG.md`** — `## v2 — <date>` entry, in the same PR as
   the workflow change.
 - **`mbtalerts/CLAUDE.md`** (line 97) is the only consumer doc that names the

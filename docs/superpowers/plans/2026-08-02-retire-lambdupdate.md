@@ -402,7 +402,9 @@ Then replace the paragraph at 268-274:
 `${project}.github-deploy.${region}` when `regional: true`), copies the zip to
 `s3://code-${account}-${region}-an/`, then calls `UpdateFunctionCode` on the
 function named by `project` and waits for it to go active. The role therefore
-needs three permissions: `s3:PutObject` on the object, and
+needs four permissions: `s3:PutObject` on the object; `s3:GetObject` on the same
+object, because `update-function-code` with an S3 source has Lambda fetch the
+object using the *caller's* credentials, not the function's execution role; and
 `lambda:UpdateFunctionCode` plus `lambda:GetFunction` (which backs the waiter) on
 the function. Each `deploy-*` job **must** grant `id-token: write` and pass the
 `aws-account-id` secret. Repeat the `deploy` job per region for multi-region
@@ -424,10 +426,16 @@ CI instead of surfacing as a log line in someone else's Lambda. It retries
 immediately on anything else.
 
 **Breaking:** the `${project}.github-deploy` role now needs
-`lambda:UpdateFunctionCode` and `lambda:GetFunction` on the target function in
-addition to `s3:PutObject`. Grant those before bumping a caller's pin to `@v2`.
-The function name is `project`; callers whose function is named differently need
-a change here first.
+`lambda:UpdateFunctionCode` and `lambda:GetFunction` on the target function, and
+`s3:GetObject` in addition to `s3:PutObject` on the artifact object —
+`update-function-code` with an S3 source has Lambda fetch the object using the
+caller's credentials, not the function's execution role. Grant all four before
+bumping a caller's pin to `@v2`. The function name is `project`; callers whose
+function is named differently need a change here first.
+
+(This requirement was initially documented as three permissions, missing
+`s3:GetObject`; a real deploy's `AccessDeniedException` surfaced the gap and
+this entry was corrected in place.)
 
 This retires `LambdUpdate`, the Lambda that watched the code bucket for `.zip`
 objects and called `UpdateFunctionCode` on the caller's behalf. Its
