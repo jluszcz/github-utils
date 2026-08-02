@@ -56,6 +56,10 @@ jobs:
 
       - name: Update Function Code
         env:
+          # Duplicates job-level PROJECT rather than reusing it: --s3-key
+          # deliberately stays on $PROJECT while --function-name uses
+          # $FUNCTION_NAME, so the day a repo's function name diverges from
+          # its project name, only this line changes.
           FUNCTION_NAME: ${{ inputs.project }}
         run: |
           for attempt in 1 2 3; do
@@ -77,4 +81,8 @@ jobs:
               *) exit 1 ;;
             esac
           done
-          aws lambda wait function-updated-v2 --function-name "$FUNCTION_NAME"
+          if ! aws lambda wait function-updated-v2 --function-name "$FUNCTION_NAME"; then
+            aws lambda get-function --function-name "$FUNCTION_NAME" \
+              --query 'Configuration.{Status:LastUpdateStatus,Reason:LastUpdateStatusReason,State:State,StateReason:StateReason}' >&2
+            exit 1
+          fi
