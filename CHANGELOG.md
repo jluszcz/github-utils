@@ -1,12 +1,25 @@
 # Changelog
 
+## v2 — 2026-08-02 (Surface the reason a deploy's activation fails)
+
+When `aws lambda wait function-updated-v2` fails — the update reached
+`LastUpdateStatus: Failed`, or the roughly five-minute poll times out — the
+step now follows with `aws lambda get-function` and prints
+`Configuration.{LastUpdateStatus,LastUpdateStatusReason,State,StateReason}` to
+the job log before exiting non-zero. Previously the only signal was the
+waiter's generic "Waiter FunctionUpdatedV2 failed: Waiter encountered a
+terminal failure state.", which never surfaces `LastUpdateStatusReason` — the
+one field that says *why* the update failed to activate. Backward-compatible:
+no new inputs, and no new IAM, since `lambda:GetFunction` already covers
+`get-function`.
+
 ## v2 — 2026-08-02 (Deploy updates the function)
 
 `deploy-lambda.yml` now calls `UpdateFunctionCode` after copying the zip to the
-code bucket, and waits for the function to go active, so a failed deploy reddens
-CI instead of surfacing as a log line in someone else's Lambda. It retries
-`ResourceConflictException` up to three times with 1s/2s backoff and fails
-immediately on anything else.
+code bucket, and waits for the update to complete successfully, so a failed
+deploy reddens CI instead of surfacing as a log line in someone else's Lambda.
+It retries `ResourceConflictException` up to three attempts with 1s/2s backoff
+and fails immediately on anything else.
 
 **Breaking:** the `${project}.github-deploy` role now needs
 `lambda:UpdateFunctionCode` and `lambda:GetFunction` on the target function, and

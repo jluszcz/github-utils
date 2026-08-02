@@ -3,9 +3,10 @@
 Reusable GitHub Actions workflows shared across `jluszcz` repos. See `README.md`
 for the versioning model and caller examples.
 
-**Changes here fan out to every repo in the portfolio at once.** Callers pin to
-`@v1`, which is a moving tag, so a merge plus a release reaches ~16 repos with no
-action on their part. Nothing gets a staged rollout.
+**Changes here fan out to every repo in the portfolio at once.** Most callers
+pin `@v2`, the current moving major tag (`@v1` is frozen — see `README.md`), so
+a merge plus a release reaches ~16 repos with no action on their part. Nothing
+gets a staged rollout.
 
 ## Layout
 
@@ -56,8 +57,10 @@ Every PR that changes workflow behavior MUST add an entry to `CHANGELOG.md` in
 the same PR, under a `## vN — YYYY-MM-DD (short title)` heading, where `vN` is
 the major it will ship under:
 
-- Backward-compatible change (moves `v1`) → heading `## v1 — <date> (...)`.
-- Breaking change (cuts the next major) → heading `## v2 — <date> (...)`.
+- Backward-compatible change (moves the current major) → heading uses that
+  major (`v2` today).
+- Breaking change (cuts the next major) → heading uses the next major (`v3`
+  today).
 
 The release script does NOT touch `CHANGELOG.md`; it only moves/creates the tag,
 so the changelog must already be correct at release time.
