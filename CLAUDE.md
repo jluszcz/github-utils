@@ -65,6 +65,12 @@ the major it will ship under:
 The release script does NOT touch `CHANGELOG.md`; it only moves/creates the tag,
 so the changelog must already be correct at release time.
 
+**Exception:** a Dependabot PR that only bumps a pinned action SHA (no other
+diff) does not get a `CHANGELOG.md` entry. It has no human author to write one,
+and `auto-release.yml` releases it automatically on merge — see "Releasing"
+below. If a PR mixes a Dependabot bump with a real behavior change, it's no
+longer Dependabot-authored and the normal rule applies.
+
 ## Releasing
 
 After the PR is merged, cut the release with the script (it tags `origin/main`'s
@@ -77,3 +83,9 @@ The script prepends the `vN:` tag prefix to the message itself; passing a
 message that already starts with `vN:` is rejected.
 
 Preview with `--dry-run`. See `README.md` → "Releasing changes" for details.
+
+Dependabot's own PRs (bumping a pinned action SHA) skip this manual step:
+`self-auto-merge.yml` auto-merges them, and `auto-release.yml` then runs
+`scripts/release.py -m "<PR title>" --yes` to move `v2` to the merge commit —
+per `README.md`'s classification table this is always the "move current major"
+case, never `--breaking`.
