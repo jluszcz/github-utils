@@ -12,7 +12,11 @@ jobs:
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      # write, not read: `@claude fix this` on a PR often ends in a commit
+      # pushed to the PR branch. The App token minted by the OIDC exchange is
+      # scoped down to these declared permissions, so `contents: read` makes
+      # that push fail with a 403 well after Claude has done the work.
+      contents: write
       pull-requests: read
       issues: read
       id-token: write

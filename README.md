@@ -138,7 +138,7 @@ on:
   issues: { types: [opened, assigned] }
   pull_request_review: { types: [submitted] }
 permissions:
-  contents: read
+  contents: write
   pull-requests: read
   issues: read
   id-token: write
@@ -148,6 +148,11 @@ jobs:
     uses: jluszcz/github-utils/.github/workflows/claude.yml@v2
     secrets: inherit
 ```
+
+`contents: write` is what lets Claude push a commit to the PR branch when a
+comment asks it to fix something. Drop it to `read` in a repo where Claude
+should only ever comment; the reusable job's own `contents: write` is a ceiling,
+not a floor, so the caller's value wins when it is lower.
 
 ### `.github/workflows/claude-code-review.yml`
 

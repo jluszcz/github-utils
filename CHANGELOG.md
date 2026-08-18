@@ -1,5 +1,21 @@
 # Changelog
 
+## v2 — 2026-08-17 (Claude can push commits)
+
+`claude.yml`'s job now requests `contents: write` instead of `contents: read`.
+The App token `claude-code-action` mints through the OIDC exchange is scoped
+down to the job's declared permissions, so under `contents: read` an `@claude`
+comment asking for a fix would produce the commit locally and then fail to push
+it with `remote: Write access to repository not granted` / HTTP 403 — after the
+work was already done.
+
+Backward-compatible: no new inputs, and the reusable job's permissions are a
+ceiling rather than a floor. **Callers must opt in**, though: a called
+workflow's permissions cannot exceed the caller's, and every caller today
+declares `contents: read`. Until a caller raises its own `permissions.contents`
+to `write`, `@claude` there still cannot push. Callers that should never have
+Claude commit can leave theirs at `read`.
+
 ## v2 — 2026-08-02 (Surface the reason a deploy's activation fails)
 
 When `aws lambda wait function-updated-v2` fails — the update reached
