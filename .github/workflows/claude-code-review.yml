@@ -45,7 +45,15 @@ jobs:
           track_progress: true
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }} --comment'
+          prompt: |
+            /code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }} --comment
+
+            Dispatch every review agent with `run_in_background: false`, and do
+            not end your turn until the findings are posted. `Agent` launches
+            asynchronously unless told otherwise, and this is a one-shot
+            headless run with no notification loop to wake you when a background
+            agent finishes — so ending your turn to wait for one kills it, and
+            the review exits green having posted only its progress checklist.
           # `Skill` is what runs the slash command in `prompt` above. Without
           # it that first call is denied, the plugin command never loads, and
           # what remains is a model improvising a review from the bare prompt

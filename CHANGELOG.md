@@ -1,5 +1,33 @@
 # Changelog
 
+## v2 — 2026-08-18 (Review agents run in the foreground)
+
+`claude-code-review.yml` extends `prompt` with an instruction to dispatch every
+review agent with `run_in_background: false` and not to end the turn until the
+findings are posted. This is the actual fix for reviews that finish green having
+posted nothing but their progress checklist.
+
+The captured execution log names the cause. `Agent` launches asynchronously
+unless told otherwise: all five dispatches returned "Async agent launched
+successfully" with an `agentId`, and `run_in_background` was never set. With
+nothing to block on, Claude updated the checklist, tried `ScheduleWakeup`, wrote
+"I'll just wait for the automatic completion notifications rather than
+scheduling a manual wakeup", and ended its turn. A one-shot headless run has no
+notification loop, so the session terminated there — `stop_reason: end_turn`,
+`is_error: false`, exit 0 — with all five agents killed mid-flight.
+
+That is why it looked intermittent. The runs that produced a real review passed
+`run_in_background: false` explicitly; the ones that stalled left it unset and
+took the async default. Nothing in the configuration forced the choice either
+way, so the same PR could review fine or die depending on how the model phrased
+one tool call.
+
+Reproduced on MisterManager #29 (17 turns, 1m 26s, **zero** permission denials,
+frozen after "Summarize PR changes"). Denials were never involved: #30 recorded
+40 of them and posted a complete review with five inline comments.
+
+Backward-compatible: no new inputs, no new permissions.
+
 ## v2 — 2026-08-18 (Reviews can keep their execution log)
 
 `claude-code-review.yml` takes a `debug` input (default `false`). When set, the
