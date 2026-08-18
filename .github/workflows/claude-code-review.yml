@@ -2,6 +2,11 @@ name: Claude Code Review
 
 on:
   workflow_call:
+    inputs:
+      debug:
+        description: Keep Claude's execution log as a build artifact
+        type: boolean
+        default: false
 
 jobs:
   claude-review:
@@ -55,3 +60,23 @@ jobs:
           # not permission-gated.
           claude_args: |
             --allowedTools "Skill,mcp__github_inline_comment__create_inline_comment,Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(git fetch:*),Bash(git blame:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*)"
+
+      # The action hides the turn stream, and rerunning with Actions debug
+      # logging does not unhide it, so a review that ends green having posted
+      # only its progress checklist leaves nothing to diagnose. Turning this
+      # on keeps the stream: every tool call Claude made, and a
+      # `permission_denials` entry per blocked call carrying the tool name and
+      # the input it was called with.
+      #
+      # Off by default because the log is the whole review verbatim — the
+      # diff, the file contents Claude read, and its own reasoning about them.
+      # Enable it on the caller for as long as a review is misbehaving, then
+      # turn it back off.
+      - name: Upload execution log
+        if: always() && inputs.debug && steps.claude-review.outputs.execution_file != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: claude-execution-log
+          path: ${{ steps.claude-review.outputs.execution_file }}
+          if-no-files-found: error
+          retention-days: 7
