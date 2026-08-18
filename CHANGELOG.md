@@ -1,5 +1,24 @@
 # Changelog
 
+## v2 — 2026-08-18 (Code review can dispatch its subagents)
+
+`claude-code-review.yml` adds `Task` to `--allowedTools`. The `code-review`
+plugin command is subagent-driven end to end — its steps read "use a Haiku
+agent to check eligibility", "launch 5 parallel Sonnet agents to review", "for
+each issue, launch a Haiku agent to score it" — and `Task` was in neither the
+action's base allowlist (`Glob`, `Grep`, `LS`, `Read`) nor ours, so every
+dispatch was denied.
+
+The failure was quiet and size-dependent, which is why it took this long to
+notice. On a small diff Claude gave up on the fan-out and reviewed the files
+itself, so reviews looked fine. On a large one it dispatched, absorbed a dozen
+denials, and ended its turn having posted only the progress checklist — with
+the job green, since a denied tool call is not an execution error.
+
+Backward-compatible: no new inputs, no new permissions. Subagents inherit the
+same allowlist, so they are still limited to reading plus the `git`/`gh`
+subcommands already listed.
+
 ## v2 — 2026-08-17 (Claude can push commits)
 
 `claude.yml`'s job now requests `contents: write` instead of `contents: read`.
