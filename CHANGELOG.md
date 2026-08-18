@@ -1,6 +1,36 @@
 # Changelog
 
+## v2 — 2026-08-18 (Code review actually runs the review command)
+
+`claude-code-review.yml` adds `Skill` and `Bash(git fetch:*)` to
+`--allowedTools`, and drops the `Task` entry added earlier today.
+
+`Skill` is the fix. It is the tool that runs the slash command in `prompt`, and
+it was the **first call of every review run** — denied every time. The
+`code-review` plugin command therefore never loaded: no five-agent procedure, no
+confidence scoring, no output format, and no step instructing Claude to post the
+result with `gh pr comment`. What ran instead was a model improvising a review
+from the bare prompt string. On a small diff that improvisation converged and
+posted something plausible, which is why reviews looked healthy. On a large one
+it dispatched four background agents, ended its turn to wait for them, and the
+one-shot SDK run terminated with only the progress checklist posted — and green,
+since nothing errored.
+
+`Bash(git fetch:*)` removes a secondary thrash: the checkout is `fetch-depth: 1`,
+so `origin/main` is absent and every `git log origin/main..HEAD` fails. One run
+burned eight consecutive calls on `git fetch` variants before working around it.
+
+**Correcting the previous entry below.** The `Task` entry it added was inert and
+its diagnosis was wrong. `Task` is not a tool name in Claude Code 2.1 — subagent
+dispatch is `Agent` — and `Agent` is not permission-gated, so no allowlist entry
+was ever needed for it. The execution log confirms it: four `Agent` dispatches,
+all allowed, zero denials. That change fixed nothing and is reverted here.
+
+Backward-compatible: no new inputs, no new permissions.
+
 ## v2 — 2026-08-18 (Code review can dispatch its subagents)
+
+**Superseded: this diagnosis was wrong — see the entry above.**
 
 `claude-code-review.yml` adds `Task` to `--allowedTools`. The `code-review`
 plugin command is subagent-driven end to end — its steps read "use a Haiku
