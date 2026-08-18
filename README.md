@@ -180,6 +180,15 @@ still runs and reports success on each new head commit, which a required status
 check needs, it just doesn't post another review. To request one on a later push,
 comment `@claude review this PR` on the PR (handled by `claude.yml`).
 
+A PR that edits this workflow file does not get reviewed. `claude-code-action`
+validates that its own workflow file on the PR head is byte-identical to the
+copy on the default branch, and skips itself when it is not — a PR cannot amend
+the workflow that reviews it. The step still reports success, so the check is
+green and the only trace is a `Skipping action due to workflow validation`
+warning in the job log. Merging is what makes such a change take effect, and a
+branch that predates the merge needs the default branch merged into it before
+its next review picks the change up.
+
 `debug: true` keeps Claude's execution log — the full turn stream, including a
 `permission_denials` entry per blocked call naming the tool and its input — as a
 `claude-execution-log` artifact on the run. Reach for it when a review finishes
