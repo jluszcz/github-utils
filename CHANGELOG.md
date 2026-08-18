@@ -1,5 +1,29 @@
 # Changelog
 
+## v2 — 2026-08-18 (Reviews can keep their execution log)
+
+`claude-code-review.yml` takes a `debug` input (default `false`). When set, the
+job uploads Claude's execution log as a `claude-execution-log` artifact.
+
+Reviews are still stalling after the `Skill` fix below. On MisterManager #27 and
+#28 — both with `Skill` in the allowlist — the job ended green in ~2 minutes
+having posted only its progress checklist, frozen at the state the working run
+writes immediately *before* dispatching its parallel review agents. So the run
+dies at the dispatch, and the two earlier diagnoses in this file were both
+reached without seeing what Claude actually did.
+
+That is what this input exists to end. The action hides the turn stream, and
+rerunning the job with Actions debug logging does not unhide it, so a stalled
+review leaves no evidence at all: the only signal in the log is
+`permission_denials_count`, an integer. The artifact carries the tool calls
+themselves and a `permission_denials` entry per blocked call with its input.
+
+Off by default, and worth turning back off once a review is fixed — the log is
+the review verbatim, diff and file contents included.
+
+Backward-compatible: new optional input, no new permissions, no change to a
+caller that does not set it.
+
 ## v2 — 2026-08-18 (Code review actually runs the review command)
 
 `claude-code-review.yml` adds `Skill` and `Bash(git fetch:*)` to

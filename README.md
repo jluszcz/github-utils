@@ -170,6 +170,8 @@ jobs:
   claude-review:
     uses: jluszcz/github-utils/.github/workflows/claude-code-review.yml@v2
     secrets: inherit
+    # with:
+    #   debug: true                    # default false
 ```
 
 Reviews run when the PR is opened, reopened, or marked ready for review — not on
@@ -177,6 +179,16 @@ every subsequent push. Keep `synchronize` in the trigger types anyway: the job
 still runs and reports success on each new head commit, which a required status
 check needs, it just doesn't post another review. To request one on a later push,
 comment `@claude review this PR` on the PR (handled by `claude.yml`).
+
+`debug: true` keeps Claude's execution log — the full turn stream, including a
+`permission_denials` entry per blocked call naming the tool and its input — as a
+`claude-execution-log` artifact on the run. Reach for it when a review finishes
+green without posting a review: the action hides that stream by default, and
+rerunning the job with Actions debug logging does not bring it back, so the run
+otherwise says nothing about where Claude stopped. Download it with
+`gh run download <run-id> -n claude-execution-log`. Leave it off the rest of the
+time — the log is the review verbatim, diff and file contents included, and it
+is readable by anyone who can read the repo's Actions runs.
 
 ### `.github/workflows/auto-merge.yml`
 
