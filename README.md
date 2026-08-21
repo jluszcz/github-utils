@@ -277,6 +277,40 @@ Consumers must use `uv` (with `uv.lock`) and a `.pre-commit-config.yaml`. The
 job runs `uv run pytest`, so the repo must contain at least one test — pytest
 exits non-zero ("no tests collected") on an empty suite and fails the job.
 
+### `.github/workflows/ci.yml` (Terraform)
+
+```yaml
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  terraform:
+    uses: jluszcz/github-utils/.github/workflows/terraform-ci.yml@v2
+    # with:
+    #   directories: |                 # default '.'
+    #     shared
+    #     sites/example.com
+```
+
+`terraform fmt -check -recursive -diff` runs once from the repo root, so it
+covers every `.tf` file regardless of `directories`. `terraform init
+-backend=false` then `terraform validate` run once per entry in `directories` —
+`-backend=false` keeps the job offline, so it needs no S3 backend and no AWS
+credentials, and each root's provider versions come from its committed
+`.terraform.lock.hcl`.
+
+Set `directories` in a repo whose Terraform lives anywhere other than the root,
+listing every root that has its own `.terraform.lock.hcl` plus any shared module
+directory. A root left off the list is still format-checked but never validated.
+
+This job is usually one job among several — add it alongside the `rust-ci.yml`
+call in a Rust repo that also carries its own infrastructure.
+
 ### `.github/workflows/ci.yml` (Rust Lambda: CI + package + deploy)
 
 ```yaml

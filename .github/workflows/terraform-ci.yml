@@ -1,0 +1,50 @@
+name: Terraform CI
+
+on:
+  workflow_call:
+    inputs:
+      directories:
+        description: Newline-separated Terraform root directories to init and validate
+        type: string
+        default: '.'
+
+permissions:
+  contents: read
+
+concurrency:
+  # `directories` is multi-line and would put newlines in the group name, and a
+  # caller has one Terraform check, so the inputs are omitted here (see
+  # rust-ci.yml for the usual rule). A caller that ever makes two calls needs
+  # them in this group first.
+  group: ${{ github.workflow }}-terraform-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  terraform:
+    name: Format & Validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_wrapper: false
+
+      # Recursive from the repo root, so one run covers every directory.
+      - name: Format
+        run: terraform fmt -check -recursive -diff
+
+      # -backend=false keeps this offline: no S3 backend, no AWS credentials.
+      # The provider versions come from each root's committed .terraform.lock.hcl.
+      - name: Validate
+        env:
+          DIRECTORIES: ${{ inputs.directories }}
+        run: |
+          while read -r dir; do
+            [ -n "$dir" ] || continue
+            echo "::group::$dir"
+            terraform -chdir="$dir" init -backend=false
+            terraform -chdir="$dir" validate
+            echo "::endgroup::"
+          done <<< "$DIRECTORIES"
