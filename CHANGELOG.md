@@ -1,5 +1,26 @@
 # Changelog
 
+## v2 — 2026-08-21 (Terraform format & validate)
+
+New `terraform-ci.yml`: `terraform fmt -check -recursive -diff` from the repo
+root, then `terraform init -backend=false` and `terraform validate` per root
+directory. Both halves already existed, copy-pasted, in `AmazonWebServices` and
+`MisterManager`; every other repo carrying `.tf` files had no check at all.
+
+The optional `directories` input (newline-separated, default `.`) covers repos
+whose Terraform is not at the root. `ListOfLists-rs` is the reason it exists: it
+has no root `.tf` and five separate roots, each with its own
+`.terraform.lock.hcl`.
+
+`-backend=false` is what makes this runnable as an ordinary CI job — no S3
+backend, no AWS credentials, no OIDC — so callers need nothing beyond the
+default `contents: read`.
+
+Backward-compatible: a new workflow plus an optional input with a default. The
+two repos that had the check inline see their status check renamed from
+`Format & Validate` to `terraform / Format & Validate`, which is a caller-side
+change, not a break in this repo's API.
+
 ## v2 — 2026-08-18 (Review agents run in the foreground)
 
 `claude-code-review.yml` extends `prompt` with an instruction to dispatch every
