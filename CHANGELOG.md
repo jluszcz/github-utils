@@ -19,12 +19,17 @@ dependency bumps merged and never shipped. `auto-release.yml` in this repo has
 never run: every execution in its history is `skipped`, and the one PR it was
 written for produced no run at all — `v2` was tagged by hand.
 
-An App-triggered merge is a real event, so those runs happen. It also clears a
-second, latent failure. Workflows triggered by `pull_request` events whose actor
-is `dependabot[bot]` get a read-only `GITHUB_TOKEN` regardless of the
-`permissions:` block, so `auto-release.yml` could not have pushed a tag even if
-it had run. With the App as merger the actor on `pull_request: closed` is the
-App, not `dependabot[bot]`, and the tag push works with no change to that file.
+An App-triggered merge is a real event, so those runs happen. Making the App
+the merger also changes the actor on `pull_request: closed` from
+`dependabot[bot]` to the App, so `auto-release.yml` runs under an ordinary
+actor with the `contents: write` it already declares.
+
+Provisioning is per repo *and* per secret scope. A workflow run triggered by
+Dependabot reads Dependabot secrets; GitHub Actions secrets are not available
+to it. `APP_ID` and `APP_PRIVATE_KEY` therefore go in both scopes — `--app
+dependabot` for the Dependabot PRs this exists for, `--app actions` for the
+`jluszcz`/`Deps-` arm. A repo holding only the Actions pair falls back to
+`GITHUB_TOKEN` on exactly the PRs the change targets.
 
 Restoring the push event means an auto-merged bump now runs CI and deploys with
 no human in the loop. That is what those workflows already declare; the

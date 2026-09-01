@@ -40,7 +40,9 @@ uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8.3.0
 
 A tag is mutable, and these workflows run with repository secrets in scope
 across every consuming repo. First-party `actions/*` stay on major tags
-(`actions/checkout@v7`) — GitHub controls that namespace.
+(`actions/checkout@v7`) — GitHub controls that namespace. The one exception is
+`actions/create-github-app-token`: it handles a private key, so it is pinned
+to a SHA like a third-party action even though it lives under `actions/*`.
 
 ## Concurrency groups include the call's inputs
 
