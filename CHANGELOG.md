@@ -1,5 +1,40 @@
 # Changelog
 
+## v2 — 2026-09-01 (Dependabot merges trigger downstream workflows)
+
+`auto-merge.yml` takes two optional secrets, `APP_ID` and `APP_PRIVATE_KEY`, and
+merges with a GitHub App installation token when they are set. Without them it
+falls back to the default `GITHUB_TOKEN` and behaves exactly as before, so no
+caller has to change anything to take this release.
+
+GitHub creates no workflow runs for events triggered by `GITHUB_TOKEN`
+(`workflow_dispatch` and `repository_dispatch` are the only exceptions), so
+every auto-merged bump in the portfolio has been landing on `main` as an inert
+event: no `push` run, no `pull_request: closed` run. Three same-day merges show
+it — `LottoCheck`, `EndTimes`, and `github-utils` each recorded a successful
+`Auto-Merge` and no `push` run on `main`, while a human-merged PR in `mbtalerts`
+got its `push` run. `mbtalerts`, `MovieList`, `BurgerList`, `LogStreamGC`,
+`ListOfLists-rs`, `JakeSky-rs`, and `StarList` gate deploys on `push`, so their
+dependency bumps merged and never shipped. `auto-release.yml` in this repo has
+never run: every execution in its history is `skipped`, and the one PR it was
+written for produced no run at all — `v2` was tagged by hand.
+
+An App-triggered merge is a real event, so those runs happen. It also clears a
+second, latent failure. Workflows triggered by `pull_request` events whose actor
+is `dependabot[bot]` get a read-only `GITHUB_TOKEN` regardless of the
+`permissions:` block, so `auto-release.yml` could not have pushed a tag even if
+it had run. With the App as merger the actor on `pull_request: closed` is the
+App, not `dependabot[bot]`, and the tag push works with no change to that file.
+
+Restoring the push event means an auto-merged bump now runs CI and deploys with
+no human in the loop. That is what those workflows already declare; the
+recursion guard has been suppressing it. Accepted deliberately rather than
+gated.
+
+Backward-compatible: optional secrets with a fallback. `LambdUpdate` pins `@v1`
+and does not receive this. Any other repo that never gets the secrets keeps
+today's behavior, silently.
+
 ## v2 — 2026-08-21 (Terraform format & validate)
 
 New `terraform-ci.yml`: `terraform fmt -check -recursive -diff` from the repo

@@ -87,6 +87,11 @@ title>" --yes` to move `v2` to the merge commit. These bumps are always the
 one exception to `CLAUDE.md`'s "changelog updated in the same PR" rule — a
 Dependabot PR has no human author to write that entry.
 
+The chain only runs when `auto-merge.yml` has App credentials. A merge made with
+the default `GITHUB_TOKEN` creates no `pull_request: closed` event, so
+`auto-release.yml` never starts and `v2` has to be moved by hand — see
+`auto-merge.yml` under "Callers" below.
+
 ### `v1` is frozen
 
 `scripts/release.py`'s `current_major()` takes the `max()` of the existing `v*`
@@ -213,6 +218,36 @@ jobs:
   auto-merge:
     uses: jluszcz/github-utils/.github/workflows/auto-merge.yml@v2
     secrets: inherit
+```
+
+`auto-merge.yml` merges with a GitHub App installation token when `APP_ID` and
+`APP_PRIVATE_KEY` are present as repository secrets, and falls back to the
+default `GITHUB_TOKEN` when they are not. Both are optional `workflow_call`
+secrets declared under their uppercase repository-secret names, so the
+`secrets: inherit` above passes them through with no further caller YAML.
+
+The fallback is not equivalent. GitHub creates no workflow runs for events
+triggered by `GITHUB_TOKEN`, so a merge made with it fires neither `push` nor
+`pull_request: closed`: a repo that gates deploys on `push` to `main` lands the
+bump and never ships it, and `auto-release.yml` here never moves `v2`. A repo
+without the secrets has that behavior; adding them restores the events.
+
+The App must be installed on the calling repo, with these repository
+permissions:
+
+| Permission | Level | Why |
+| --- | --- | --- |
+| Contents | Read and write | The squash merge writes to the branch |
+| Pull requests | Read and write | Enabling auto-merge |
+| Metadata | Read | Mandatory baseline |
+
+`create-github-app-token` mints a token scoped to that one installation, which
+expires in an hour. `jluszcz` is a User account, so there are no organization
+secrets — provision per repo, and re-run the same loop to rotate the key:
+
+```sh
+gh secret set APP_ID --repo "jluszcz/$REPO" --body "$APP_ID"
+gh secret set APP_PRIVATE_KEY --repo "jluszcz/$REPO" < private-key.pem
 ```
 
 ### `.github/workflows/ci.yml` (Rust)
