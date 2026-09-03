@@ -1,6 +1,6 @@
 # Changelog
 
-## v2 — 2026-09-01 (Dependabot merges trigger downstream workflows)
+## v2 — 2026-09-03 (Dependabot merges trigger downstream workflows)
 
 `auto-merge.yml` takes two optional secrets, `APP_ID` and `APP_PRIVATE_KEY`, and
 merges with a GitHub App installation token when they are set. Without them it
