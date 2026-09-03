@@ -2,6 +2,15 @@ name: Auto-Merge
 
 on:
   workflow_call:
+    secrets:
+      # Uppercase to match the caller's own repository-secret names: under
+      # `secrets: inherit` a caller's secrets arrive under those names, so
+      # declaring them here costs callers no YAML. Optional because releasing
+      # moves v2 and every @v2 caller takes this file before it has secrets.
+      APP_ID:
+        required: false
+      APP_PRIVATE_KEY:
+        required: false
 
 jobs:
   auto-merge:
@@ -15,8 +24,33 @@ jobs:
       pull-requests: write
 
     steps:
+      # The `secrets` context is not available in an `if:` expression, so the
+      # presence check has to round-trip through env and a step output.
+      - name: Check for App credentials
+        id: creds
+        env:
+          APP_ID: ${{ secrets.APP_ID }}
+        run: |
+          if [ -n "$APP_ID" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Mint App token
+        id: app-token
+        if: steps.creds.outputs.present == 'true'
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      # GitHub creates no workflow runs for events triggered by GITHUB_TOKEN, so
+      # merging with it produces no push and no `pull_request: closed` run. An
+      # App-triggered merge is a real event. A repo without the secrets falls
+      # back and keeps the inert behavior — degraded, not broken.
       - name: Enable auto-merge
         run: gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}

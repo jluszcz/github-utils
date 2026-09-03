@@ -87,6 +87,11 @@ title>" --yes` to move `v2` to the merge commit. These bumps are always the
 one exception to `CLAUDE.md`'s "changelog updated in the same PR" rule — a
 Dependabot PR has no human author to write that entry.
 
+The chain only runs when `auto-merge.yml` has App credentials. GitHub creates
+no workflow run for the `pull_request: closed` event triggered by the default
+`GITHUB_TOKEN`, so `auto-release.yml` never starts and `v2` has to be moved by
+hand — see `auto-merge.yml` under "Callers" below.
+
 ### `v1` is frozen
 
 `scripts/release.py`'s `current_major()` takes the `max()` of the existing `v*`
@@ -214,6 +219,55 @@ jobs:
     uses: jluszcz/github-utils/.github/workflows/auto-merge.yml@v2
     secrets: inherit
 ```
+
+`auto-merge.yml` merges with a GitHub App installation token when `APP_ID` and
+`APP_PRIVATE_KEY` are present as repository secrets, and falls back to the
+default `GITHUB_TOKEN` when they are not. Both are optional `workflow_call`
+secrets declared under their uppercase repository-secret names, so the
+`secrets: inherit` above passes them through with no further caller YAML.
+
+The fallback is not equivalent. GitHub creates no workflow runs for events
+triggered by `GITHUB_TOKEN`, so a merge made with it produces no `push` run and
+no `pull_request: closed` run: a repo that gates deploys on `push` to `main`
+lands the bump and never ships it, and `auto-release.yml` here never moves
+`v2`. A repo without the secrets has that behavior; adding them restores the
+runs.
+
+The App must be installed on the calling repo, with these repository
+permissions:
+
+| Permission | Level | Why |
+| --- | --- | --- |
+| Contents | Read and write | The squash merge writes to the branch |
+| Pull requests | Read and write | Enabling auto-merge |
+| Metadata | Read | Mandatory baseline |
+
+`create-github-app-token` mints a token scoped to the repository running the
+workflow, which expires in an hour. `jluszcz` is a User account, so there are
+no organization secrets — provision per repo.
+
+**Both secrets must be set in both the Actions and Dependabot secret scopes.**
+`gh secret set`/`gh secret list` take `-a, --app {actions|agents|codespaces|dependabot}`
+and default to `actions`. A workflow run triggered by Dependabot reads
+Dependabot secrets and cannot see GitHub Actions secrets, so a repo carrying
+only the Actions pair falls back to `GITHUB_TOKEN` on exactly the Dependabot
+PRs this workflow targets — the `Mint App token` step is skipped, silently.
+The Actions pair is still required: `auto-merge.yml`'s job condition also
+accepts `jluszcz`-authored PRs on a `Deps-` branch, and those runs are
+human-triggered and read Actions secrets.
+
+```bash
+for APP in actions dependabot; do
+  gh secret set APP_ID --app "$APP" --repo "jluszcz/$REPO" --body "$APP_ID"
+  gh secret set APP_PRIVATE_KEY --app "$APP" --repo "jluszcz/$REPO" < private-key.pem
+done
+```
+
+Rotate the key by re-running the same loop. `Check for App credentials` gates
+on `APP_ID` alone; if a rotation updates `APP_ID` in one scope without also
+updating `APP_PRIVATE_KEY` there, `Mint App token` fails outright rather than
+falling back, and auto-merge stops entirely for that repo until both secrets
+match again.
 
 ### `.github/workflows/ci.yml` (Rust)
 
