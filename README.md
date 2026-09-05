@@ -194,12 +194,22 @@ warning in the job log. Merging is what makes such a change take effect, and a
 branch that predates the merge needs the default branch merged into it before
 its next review picks the change up.
 
+The job fails when Claude ends its turn without posting a review.
+`track_progress` puts one comment on the PR per run and rewrites it in place, so
+the checklist in that comment records how far Claude got; a `Verify the review
+was posted` step reads it back after the action and exits non-zero while any box
+is still unticked. Nothing else distinguishes that run from a clean one — the
+action reports success on a CLI process that exited cleanly, not on a review
+that was posted, so the failure's only trace is a progress checklist nobody
+re-reads. A PR that edits this workflow file gets no comment at all (see above),
+and the step passes rather than inventing a failure.
+
 `debug: true` keeps Claude's execution log — the full turn stream, including a
 `permission_denials` entry per blocked call naming the tool and its input — as a
-`claude-execution-log` artifact on the run. Reach for it when a review finishes
-green without posting a review: the action hides that stream by default, and
-rerunning the job with Actions debug logging does not bring it back, so the run
-otherwise says nothing about where Claude stopped. Download it with
+`claude-execution-log` artifact on the run. Reach for it when the verify step
+above fails: the action hides that stream by default, and rerunning the job with
+Actions debug logging does not bring it back, so the run says which box Claude
+stopped on and nothing about why. Download it with
 `gh run download <run-id> -n claude-execution-log`. Leave it off the rest of the
 time — the log is the review verbatim, diff and file contents included, and it
 is readable by anyone who can read the repo's Actions runs.

@@ -88,3 +88,50 @@ jobs:
           path: ${{ steps.claude-review.outputs.execution_file }}
           if-no-files-found: error
           retention-days: 7
+
+      # A review that ends its turn early still exits zero: the action's
+      # success contract is that the CLI process exited cleanly, not that a
+      # review was posted. Run 33930744755 on MisterManager#90 ended
+      # `{"subtype": "success", "is_error": false, "num_turns": 19}` after 91
+      # seconds, having ticked three of six boxes and posted no findings, and
+      # the PR carried a green check. This step is what makes that red.
+      #
+      # `track_progress` posts one comment per run and rewrites it in place, so
+      # the checklist in it is the record of how far Claude got: every box
+      # ticked means it reached "Post findings". Only the leading checklist
+      # block is examined — findings prose below it may contain `- [ ]` of its
+      # own.
+      #
+      # A missing comment is not a failure. `claude-code-action` skips itself
+      # when the PR edits this workflow file (see `README.md`), reporting
+      # success without ever commenting; there is no review to verify.
+      - name: Verify the review was posted
+        if: always() && steps.claude-review.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_MARKER: actions/runs/${{ github.run_id }}
+        run: |
+          # SC2016: `$ENV.RUN_MARKER` is jq reading the environment, not shell
+          # interpolation — the single quotes are what keep it that way.
+          # shellcheck disable=SC2016
+          comment=$(gh api --paginate "repos/${REPO}/issues/${PR_NUMBER}/comments" \
+            --jq 'map(select(.body | contains($ENV.RUN_MARKER))) | .[0] // empty')
+
+          if [ -z "$comment" ]; then
+            echo "No tracking comment for this run — nothing to verify."
+            exit 0
+          fi
+
+          url=$(printf '%s' "$comment" | jq -r '.html_url')
+          checklist=$(printf '%s' "$comment" | jq -r '.body' | sed -n '/^- \[/,/^$/p')
+
+          if printf '%s\n' "$checklist" | grep -q '^- \[ \]'; then
+            printf '%s\n' "$checklist"
+            echo "::error::Claude stopped before posting its review. Unfinished checklist: ${url}"
+            echo "Re-run by commenting '@claude review this PR', or set 'debug: true' on the caller to keep the turn stream and see where it stopped."
+            exit 1
+          fi
+
+          echo "Review checklist complete: ${url}"
