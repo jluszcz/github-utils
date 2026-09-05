@@ -1,5 +1,38 @@
 # Changelog
 
+## v2 — 2026-09-04 (A review that posts nothing fails the job)
+
+`claude-code-review.yml` gains a `Verify the review was posted` step. It reads
+back the `track_progress` comment for the current run and exits non-zero while
+any checklist box in it is still unticked.
+
+`claude-code-action` succeeds when the Claude CLI process exits cleanly, which
+is not the same as a review having been posted. Run 33930744755 on
+`MisterManager#90` ended `{"subtype": "success", "is_error": false,
+"num_turns": 19}` after 91 seconds with three of six boxes ticked and no
+findings, and the PR carried a green check; the review that ran on the same
+repo an hour earlier took 7m15s. The failure is invisible unless someone
+re-reads a progress comment they have no reason to re-read, and the prompt text
+already in the workflow — dispatch agents with `run_in_background: false`, do
+not end the turn until the findings are posted — is advice to a model, so it
+holds most of the time and not all of it. This step is the part that does not
+depend on the model complying.
+
+The checklist is the signal because `track_progress` posts one comment per run
+and rewrites it in place, so its state at the end of the job is how far Claude
+got. Only the leading checklist block is examined: findings prose below it may
+contain `- [ ]` of its own. The comment is located by the run URL the action
+writes into it, so concurrent or historical reviews on the same PR are not
+mistaken for this one.
+
+A run with no such comment passes. `claude-code-action` skips itself when the
+PR edits its own workflow file, reporting success without ever commenting, and
+there is no review to verify in that case.
+
+Backward-compatible: no input, job-name, or permission changes. Callers do
+inherit a check that can now fail where it previously could not — that is the
+point of it. `debug: true` remains how you find out why a given run stopped.
+
 ## v2 — 2026-09-03 (Dependabot merges trigger downstream workflows)
 
 `auto-merge.yml` takes two optional secrets, `APP_ID` and `APP_PRIVATE_KEY`, and
