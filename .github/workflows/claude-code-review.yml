@@ -8,6 +8,23 @@ on:
         type: boolean
         default: false
 
+# Queue rather than cancel. A push mid-review fires `synchronize`, whose run
+# skips the review step and reports success in seconds; with nothing
+# serializing the two, that green lands on the new head commit while the real
+# review is still working on the old one, and the PR reads as reviewed and is
+# free to auto-merge before a single finding is posted. Queued, the check stays
+# pending until the review finishes.
+#
+# `cancel-in-progress: true` would be worse than the race it fixes: it kills
+# the only review the PR gets and greens the check anyway, leaving the
+# half-ticked progress comment behind with no run to finish it.
+#
+# `inputs.debug` is in the group per the usual rule (see rust-ci.yml) —
+# `github.workflow` is the caller's name, so it alone does not identify a call.
+concurrency:
+  group: ${{ github.workflow }}-claude-code-review-${{ inputs.debug }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   claude-review:
     runs-on: ubuntu-latest

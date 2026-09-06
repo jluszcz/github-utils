@@ -123,11 +123,13 @@ the reusable job needs, or the job fails to start.
 ### Concurrency
 
 Each reusable workflow sets its own `concurrency` group so a superseded run is
-cancelled and the latest wins. The group includes the **inputs that identify the
-call**, not just the workflow name — inside a called workflow `github.workflow`
-resolves to the *caller's* workflow name, so every call from one caller shares
-it. Without the inputs, calling the same reusable workflow twice in one caller
-(e.g. a `deploy` job per region) puts both in one group with
+cancelled and the latest wins. `claude-code-review.yml` is the exception: it
+queues (`cancel-in-progress: false`) rather than cancelling, because cancelling
+would throw away the one review the PR gets. The group includes the **inputs
+that identify the call**, not just the workflow name — inside a called workflow
+`github.workflow` resolves to the *caller's* workflow name, so every call from
+one caller shares it. Without the inputs, calling the same reusable workflow
+twice in one caller (e.g. a `deploy` job per region) puts both in one group with
 `cancel-in-progress: true`, and they cancel each other.
 
 Callers need no `concurrency` block of their own. When adding an input that
@@ -184,6 +186,12 @@ every subsequent push. Keep `synchronize` in the trigger types anyway: the job
 still runs and reports success on each new head commit, which a required status
 check needs, it just doesn't post another review. To request one on a later push,
 comment `@claude review this PR` on the PR (handled by `claude.yml`).
+
+Pushing while a review is running leaves that check **pending** until the review
+finishes. The `synchronize` run is queued behind the in-flight one rather than
+cancelling it, so the review always completes and posts, and the green check on
+the new head commit lands after it rather than during it. The findings describe
+the commit the review started on, which is not the head commit any more.
 
 A PR that edits this workflow file does not get reviewed. `claude-code-action`
 validates that its own workflow file on the PR head is byte-identical to the
