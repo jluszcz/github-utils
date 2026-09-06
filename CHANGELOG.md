@@ -1,5 +1,34 @@
 # Changelog
 
+## v2 — 2026-09-06 (A review in flight keeps the check pending)
+
+`claude-code-review.yml` gains a `concurrency` group keyed on the caller, the
+`debug` input and `github.ref`, with `cancel-in-progress: false`.
+
+It had no group at all, so nothing serialized two runs on the same PR. A push
+while a review is running fires `synchronize`, and that run skips the review
+step by design and reports success in seconds — on the *new* head commit, which
+is the SHA the PR's check list renders. `dotfiles#48` pushed 72 seconds into a
+review: run 34033045743 was still working on `b602971` while run 34033105596
+turned `1fe1684` green in five, and the PR read as reviewed with nothing posted.
+Auto-merge is free to land a PR in that state.
+
+Queued, the `synchronize` run waits for the review to finish, so the check stays
+pending for the review's duration and goes green after it. Cancelling instead
+would have destroyed the only review the PR gets while greening the check just
+the same, and left the half-ticked `track_progress` comment on the PR with no
+run to finish it.
+
+This narrows but does not close the gap the previous entry's `Verify the review
+was posted` step opened: that step still runs in the review's own run, against
+the commit the review started on, so its red lands on a SHA the PR no longer
+shows. A review that stops early on a PR that was then pushed to is still green
+at the head. Reviewing each new head commit is what would close it, and that is
+a deliberate reversal of reviewing once per PR, not a fix.
+
+Backward-compatible: no input, job-name, or permission changes. Callers need no
+`concurrency` block of their own.
+
 ## v2 — 2026-09-04 (A review that posts nothing fails the job)
 
 `claude-code-review.yml` gains a `Verify the review was posted` step. It reads
