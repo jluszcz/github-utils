@@ -38,7 +38,7 @@ change is backward-compatible.
 
 Backward-compatible fixes (version bumps, condition tweaks, new *optional*
 inputs) reuse the current major tag. Record the change in `CHANGELOG.md` in the
-same PR (see `CLAUDE.md`). After merging to `main`, cut the release:
+same PR (see `AGENTS.md`). After merging to `main`, cut the release:
 
 ```bash
 scripts/release.py -m "<what changed>"
@@ -84,7 +84,7 @@ for a manual release. `self-auto-merge.yml` auto-merges them once required
 checks pass, and `auto-release.yml` then runs `scripts/release.py -m "<PR
 title>" --yes` to move `v2` to the merge commit. These bumps are always the
 "move current major" case in the table below, never breaking, and they're the
-one exception to `CLAUDE.md`'s "changelog updated in the same PR" rule — a
+one exception to `AGENTS.md`'s "changelog updated in the same PR" rule — a
 Dependabot PR has no human author to write that entry.
 
 The chain only runs when `auto-merge.yml` has App credentials. GitHub creates

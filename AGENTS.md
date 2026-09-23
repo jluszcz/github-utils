@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 Reusable GitHub Actions workflows shared across `jluszcz` repos. See `README.md`
 for the versioning model and caller examples.
