@@ -281,7 +281,8 @@ for APP in actions dependabot; do
 done
 ```
 
-Rotate the key by re-running the same loop. `Check for App credentials` gates
+`scripts/setup-automerge.sh [owner/repo]` runs this loop for the current repo, reading
+both values from 1Password (`op`). Rotate the key by re-running it. `Check for App credentials` gates
 on `APP_ID` alone; if a rotation updates `APP_ID` in one scope without also
 updating `APP_PRIVATE_KEY` there, `Mint App token` fails outright rather than
 falling back, and auto-merge stops entirely for that repo until both secrets
