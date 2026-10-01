@@ -11,5 +11,7 @@ repo="${1:-$(gh repo view --json nameWithOwner --jq .nameWithOwner)}"
 app_id="$(op read "op://Personal/Github Automerge/app id")"
 private_key="$(op read "op://Personal/Github Automerge/jluszcz-automerge.pem")"
 
-gh secret set APP_ID -r "$repo" -b "$app_id"
-gh secret set APP_PRIVATE_KEY -r "$repo" -b "$private_key"
+for app in actions dependabot; do
+  gh secret set APP_ID -r "$repo" -b "$app_id"
+  gh secret set APP_PRIVATE_KEY -r "$repo" -b "$private_key"
+done
