@@ -1,5 +1,16 @@
 # Changelog
 
+## v2 — 2026-10-01 (Mint the App token with client-id)
+
+`auto-merge.yml` passes `APP_ID` to `create-github-app-token`'s `client-id`
+input instead of the deprecated `app-id`, which logged `Input 'app-id' has been
+deprecated` on every run.
+
+No secret is renamed or added: `APP_ID` is passed through unchanged, and GitHub
+accepts either the App's Client ID or its numeric App ID as the JWT issuer.
+
+Backward-compatible: callers need no change.
+
 ## v2 — 2026-09-06 (A review in flight keeps the check pending)
 
 `claude-code-review.yml` gains a `concurrency` group keyed on the caller, the
