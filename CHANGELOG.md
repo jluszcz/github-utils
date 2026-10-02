@@ -1,5 +1,24 @@
 # Changelog
 
+## v2 — 2026-10-01 (Merge directly when the PR is already mergeable)
+
+`auto-merge.yml` merges the PR directly when `gh pr merge --auto` fails and
+`gh pr checks --required` reports every required check passing.
+
+GitHub will not enable auto-merge on a PR that could merge right now, and
+answers `Pull request is in unstable status` instead. A fast check suite can
+finish before the call lands: on `plexport#35` both required checks were green
+by the time `enablePullRequestAutoMerge` was evaluated, the only pending check
+was the Auto-Merge job itself, and run 36893414324 failed with the PR left
+unmerged.
+
+The direct merge is gated on the required checks rather than on the error text.
+`gh pr checks --required` exits non-zero when a required check is pending or
+failed, and when the repo has no required checks at all, so a repo without
+them still never merges ahead of its CI.
+
+Backward-compatible: callers need no change.
+
 ## v2 — 2026-10-01 (Mint the App token with client-id)
 
 `auto-merge.yml` passes `APP_ID` to `create-github-app-token`'s `client-id`

@@ -49,8 +49,21 @@ jobs:
       # merging with it produces no push and no `pull_request: closed` run. An
       # App-triggered merge is a real event. A repo without the secrets falls
       # back and keeps the inert behavior — degraded, not broken.
+      #
+      # GitHub refuses to enable auto-merge on a PR that is already mergeable
+      # ("Pull request is in clean/unstable status"), which happens whenever
+      # every required check finishes before the API call lands. Merge directly
+      # in that case, but only once `gh pr checks --required` confirms the
+      # required checks passed: it exits non-zero while one is pending or
+      # failed, and when the repo has none, so a repo without required checks
+      # never merges ahead of its CI.
       - name: Enable auto-merge
-        run: gh pr merge --auto --squash "$PR_URL"
+        run: |
+          if gh pr merge --auto --squash "$PR_URL"; then
+            exit 0
+          fi
+          gh pr checks "$PR_URL" --required
+          gh pr merge --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
