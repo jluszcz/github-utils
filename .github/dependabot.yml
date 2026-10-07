@@ -10,3 +10,13 @@ updates:
           - "*"
     assignees:
       - "jluszcz"
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      all-uv:
+        patterns:
+          - "*"
+    assignees:
+      - "jluszcz"

@@ -79,8 +79,8 @@ bump PRs.
 
 ### Dependabot bumps release themselves
 
-Dependabot's own PRs here (bumping a pinned third-party action SHA) don't wait
-for a manual release. `self-auto-merge.yml` auto-merges them once required
+Dependabot's own PRs here (bumping a pinned third-party action SHA, or a dev
+dependency in `uv.lock`) don't wait for a manual release. `self-auto-merge.yml` auto-merges them once required
 checks pass, and `auto-release.yml` then runs `scripts/release.py -m "<PR
 title>" --yes` to move `v2` to the merge commit. These bumps are always the
 "move current major" case in the table below, never breaking, and they're the
