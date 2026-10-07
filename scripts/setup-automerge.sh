@@ -1,8 +1,26 @@
 #!/usr/bin/env bash
 # Provision the auto-merge.yml GitHub App credentials (APP_ID, APP_PRIVATE_KEY)
 # on the repo in the current directory, in both the Actions and Dependabot
-# secret scopes. Usage: setup-automerge.sh [owner/repo]
+# secret scopes. Usage: setup-automerge.sh [-h] [owner/repo]
 set -euo pipefail
+
+usage() {
+  echo "Usage: $(basename "$0") [-h] [owner/repo]"
+  echo
+  echo "Set APP_ID and APP_PRIVATE_KEY (read from 1Password) as Actions and"
+  echo "Dependabot secrets on owner/repo, defaulting to the current directory's repo."
+}
+
+case "${1:-}" in
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  -*)
+    usage >&2
+    exit 2
+    ;;
+esac
 
 # Resolved from the git remote rather than the directory name so a worktree
 # checked out under a different name still targets the right repo.
