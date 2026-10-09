@@ -1,5 +1,30 @@
 # Changelog
 
+## v2 — 2026-10-09 (Run the review as Anthropic's stock workflow)
+
+`claude-code-review.yml` drops its customizations of the review step and runs
+the stock template: the `code-review` plugin command with `--comment`, and
+nothing else.
+
+Removed: `track_progress`, `allowed_bots`, the `--allowedTools` list, the
+instruction to run review agents in the foreground, and the `Verify the review
+was posted` step. `track_progress` runs the action in tag mode, which wraps the
+prompt in its own instructions — keep a checklist comment, run linters and
+tests — instead of passing the slash command straight to Claude Code. Reviews
+under it skipped the plugin's multi-agent procedure and posted a hand-read
+summary instead; on MisterManager#147 (run 37914917465) Claude tried
+`cargo clippy`, was denied, and posted "I did not complete this review" with a
+green check, because the verify step only caught an unticked checklist and that
+comment had none. The tracking comment also counted as "Claude has already
+commented", one of the plugin's reasons to stop. The other removed pieces either
+patched tag-mode behavior or depended on its checklist.
+
+Kept: `workflow_call` with the `debug` input, the queued concurrency group, the
+`synchronize` and dependency-PR skips, `pull-requests: write` (needed for
+`--comment`), and the SHA pin.
+
+Backward-compatible: callers need no change.
+
 ## v2 — 2026-10-01 (Merge directly when the PR is already mergeable)
 
 `auto-merge.yml` merges the PR directly when `gh pr merge --auto` fails and
