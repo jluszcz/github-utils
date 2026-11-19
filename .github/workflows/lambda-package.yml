@@ -35,7 +35,7 @@ jobs:
       PROJECT: ${{ inputs.project }}
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
       - name: Update and Configure Rust
         run: |
@@ -45,7 +45,7 @@ jobs:
           rustup target add "$TARGET"
 
       - name: Cache Cargo
-        uses: Swatinem/rust-cache@c8037a86dde8214a8310e9f54a8fc61ab362aa31 # v2
+        uses: Swatinem/rust-cache@v2.9.3
 
       - name: Package
         run: |
@@ -54,7 +54,7 @@ jobs:
           zip -j "$PROJECT.zip" bootstrap
 
       - name: Upload Package
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: package
           path: ${{ inputs.project }}.zip

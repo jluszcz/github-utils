@@ -29,20 +29,34 @@ CI runs exactly these, plus a standalone `actionlint` job. Both `pytest` and the
 hooks run offline. `pre-commit` includes `actionlint`, so a workflow edit is
 checked before it is committed — do that rather than pushing to see if it parses.
 
-## Pin third-party actions to a commit SHA
+## Action versions are locked in `actions.lock`
 
-Any `uses:` outside the `actions/*` namespace must be a full commit SHA with the
-human-readable version in a trailing comment:
+Every `uses:` of an action references a full version tag, never a commit SHA:
 
 ```yaml
-uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8.3.0
+uses: astral-sh/setup-uv@v10.3.3
 ```
 
-A tag is mutable, and these workflows run with repository secrets in scope
-across every consuming repo. First-party `actions/*` stay on major tags
-(`actions/checkout@v7`) — GitHub controls that namespace. The one exception is
-`actions/create-github-app-token`: it handles a private key, so it is pinned
-to a SHA like a third-party action even though it lives under `actions/*`.
+`.github/workflows/actions.lock` records the commit (plus owner and repo IDs)
+each tag resolved to, including transitive dependencies of composite actions,
+and the runner executes that commit even if the tag later moves. A tag is
+mutable and these workflows run with repository secrets in scope across every
+consuming repo, so the lock — not the tag — is what makes a reference safe.
+The lockfile covers the actions in reusable workflows defined here for every
+caller; a caller's own lockfile does not.
+
+After adding a workflow or changing any `uses:`, regenerate and commit the lock:
+
+```sh
+gh extension install github/gh-actions-lock --pin v0.4.1   # once
+gh actions-lock                                            # rewrite actions.lock
+```
+
+Never edit `actions.lock` by hand. CI's `Actions Lockfile` job
+(`actions-lock.yml`) runs `gh actions-lock --verify` and fails when the lock is
+stale or a locked commit no longer verifies upstream. A full version tag that
+moves upstream is an error until `gh actions-lock --relock`; review why it moved
+first. Dependabot regenerates the matching lock entries in its own bump PRs.
 
 ## Concurrency groups include the call's inputs
 
@@ -67,8 +81,8 @@ the major it will ship under:
 The release script does NOT touch `CHANGELOG.md`; it only moves/creates the tag,
 so the changelog must already be correct at release time.
 
-**Exception:** a Dependabot PR that only bumps a pinned action SHA or a
-`uv.lock` dev dependency (no other diff) does not get a `CHANGELOG.md` entry. It has no human author to write one,
+**Exception:** a Dependabot PR that only bumps an action version (and its
+`actions.lock` entry) or a `uv.lock` dev dependency (no other diff) does not get a `CHANGELOG.md` entry. It has no human author to write one,
 and `auto-release.yml` releases it automatically on merge — see "Releasing"
 below. If a PR mixes a Dependabot bump with a real behavior change, it's no
 longer Dependabot-authored and the normal rule applies.
@@ -86,7 +100,7 @@ message that already starts with `vN:` is rejected.
 
 Preview with `--dry-run`. See `README.md` → "Releasing changes" for details.
 
-Dependabot's own PRs (bumping a pinned action SHA or a `uv.lock` dev
+Dependabot's own PRs (bumping an action version or a `uv.lock` dev
 dependency) skip this manual step:
 `self-auto-merge.yml` auto-merges them, and `auto-release.yml` then runs
 `scripts/release.py -m "<PR title>" --yes` to move `v2` to the merge commit —

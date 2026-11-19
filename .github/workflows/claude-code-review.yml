@@ -33,7 +33,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 1
 
@@ -52,7 +52,7 @@ jobs:
           github.event.action != 'synchronize' &&
           github.event.pull_request.user.login != 'dependabot[bot]' &&
           !(github.event.pull_request.user.login == 'jluszcz' && startsWith(github.event.pull_request.head.ref, 'Deps-'))
-        uses: anthropics/claude-code-action@d70510b174a1244958df0b03166a54912811f3e6 # v1.0.264
+        uses: anthropics/claude-code-action@v1.0.264
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
@@ -75,7 +75,7 @@ jobs:
       # turn it back off.
       - name: Upload execution log
         if: always() && inputs.debug && steps.claude-review.outputs.execution_file != ''
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: claude-execution-log
           path: ${{ steps.claude-review.outputs.execution_file }}
