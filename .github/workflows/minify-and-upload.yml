@@ -46,13 +46,13 @@ jobs:
 
     steps:
       - name: Check Out Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
 
       - name: Minify JSON
         run: jq --compact-output '.lists |= map(select(.hidden != true))' "$PROJECT.json" > "$PROJECT.min.json"
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        uses: aws-actions/configure-aws-credentials@v6.3.0
         with:
           role-to-assume: arn:aws:iam::${{ secrets.aws-account-id }}:role/${{ inputs.project }}.github-update
           role-session-name: github-upload

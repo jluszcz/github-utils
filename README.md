@@ -79,7 +79,7 @@ bump PRs.
 
 ### Dependabot bumps release themselves
 
-Dependabot's own PRs here (bumping a pinned third-party action SHA, or a dev
+Dependabot's own PRs here (bumping an action version and its `actions.lock` entry, or a dev
 dependency in `uv.lock`) don't wait for a manual release. `self-auto-merge.yml` auto-merges them once required
 checks pass, and `auto-release.yml` then runs `scripts/release.py -m "<PR
 title>" --yes` to move `v2` to the merge commit. These bumps are always the
@@ -284,6 +284,32 @@ on `APP_ID` alone; if a rotation updates `APP_ID` in one scope without also
 updating `APP_PRIVATE_KEY` there, `Mint App token` fails outright rather than
 falling back, and auto-merge stops entirely for that repo until both secrets
 match again.
+
+### `.github/workflows/actions-lock.yml`
+
+```yaml
+name: Actions Lockfile
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  actions-lock:
+    uses: jluszcz/github-utils/.github/workflows/actions-lock.yml@v2
+```
+
+Runs `gh actions-lock --verify` against the caller's
+`.github/workflows/actions.lock`, failing when the lock is missing an entry for
+a `uses:`, has entries for actions no workflow uses, or records a commit that
+no longer verifies upstream. Generate the lock with `gh actions-lock` (from the
+`github/gh-actions-lock` extension) and rerun it after any `uses:` change.
+
+The lock does not cover calls to these reusable workflows (`jobs.<id>.uses`):
+`@v2` stays a moving tag by design. The actions *inside* them are locked by
+this repo's own `actions.lock`, which applies to every caller.
 
 ### `.github/workflows/ci.yml` (Rust)
 

@@ -1,5 +1,26 @@
 # Changelog
 
+## v2 — 2026-11-19 (Lock action versions in `actions.lock`)
+
+Every `uses:` of an action now references a full version tag
+(`Swatinem/rust-cache@v2.9.3`, `actions/checkout@v7.0.1`) instead of a commit
+SHA or a major tag, and `.github/workflows/actions.lock` records the commit each
+one runs. The runner executes the locked commit even if a tag moves, and the
+lock also covers composite actions' transitive dependencies, which SHA pins in
+the YAML never did. Because a reusable workflow's actions are governed by the
+lockfile of the repo that defines it, every caller gets this with no change.
+
+`Swatinem/rust-cache` moves from the `v2` commit it was pinned to (`c8037a8`) to
+`v2.9.3`; the other SHA-pinned actions resolve to the commits they were already
+pinned to. First-party `actions/*` move from major tags to their latest full
+tags.
+
+New reusable `actions-lock.yml` runs `gh actions-lock --verify` so a caller's
+own lockfile cannot drift from its workflows. This repo's `ci.yml` runs it as
+the `Actions Lockfile` job.
+
+Backward-compatible: callers need no change.
+
 ## v2 — 2026-10-09 (Run the review as Anthropic's stock workflow)
 
 `claude-code-review.yml` drops its customizations of the review step and runs
