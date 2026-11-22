@@ -278,7 +278,8 @@ for APP in actions dependabot; do
 done
 ```
 
-`scripts/setup-automerge.sh [owner/repo]` runs this loop for the current repo, reading
+`scripts/setup-automerge.sh`, run from inside the target repo's checkout, runs
+this loop for it (set `GH_REPO=owner/repo` to target another repo), reading
 both values from 1Password (`op`). Rotate the key by re-running it. `Check for App credentials` gates
 on `APP_ID` alone; if a rotation updates `APP_ID` in one scope without also
 updating `APP_PRIVATE_KEY` there, `Mint App token` fails outright rather than
