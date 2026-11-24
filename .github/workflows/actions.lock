@@ -12,6 +12,12 @@ workflows:
     '.github/workflows/ci.yml':
         - 'actions/checkout@v7.0.1'
         - 'raven-actions/actionlint@v2.2.0'
+    '.github/workflows/claude-code-review.yml':
+        - 'actions/checkout@v7.0.1'
+        - 'anthropics/claude-code-action@v1.0.289'
+    '.github/workflows/claude.yml':
+        - 'actions/checkout@v7.0.1'
+        - 'anthropics/claude-code-action@v1.0.289'
     '.github/workflows/deploy-lambda.yml':
         - 'actions/download-artifact@v8.0.2'
         - 'aws-actions/configure-aws-credentials@v6.3.0'
@@ -77,6 +83,13 @@ dependencies:
         commit: 'sha1-cf430e030ddbb5b0abf93d22962f4752f3646cd9'
         owner_id: 44036562
         repo_id: 192625955
+    'anthropics/claude-code-action@v1.0.289':
+        ref: 'v1.0.289'
+        commit: 'sha1-eb56b6666facdbd501035f4a0269d8caee2e7a8b'
+        owner_id: 76263028
+        repo_id: 986421638
+        uses:
+            - 'oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6'
     'astral-sh/setup-uv@v10.3.3':
         ref: 'v10.3.3'
         commit: 'sha1-68559e99cc807c1eb7e9238fd43a15bba460eec2'
@@ -92,6 +105,11 @@ dependencies:
         commit: 'sha1-dfe3c3f87815947d99a8997f908cb6525fc44e9e'
         owner_id: 761456
         repo_id: 258271226
+    'oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6':
+        ref: 'v2.2.0'
+        commit: 'sha1-0c5077e51419868618aeaa5fe8019c62421857d6'
+        owner_id: 108928776
+        repo_id: 512644635
     'raven-actions/actionlint@v2.2.0':
         ref: 'v2.2.0'
         commit: 'sha1-3d39aea434753780c3b3d4a1a31c854b4dbf49d7'
