@@ -1,5 +1,15 @@
 # Changelog
 
+## v2 — 2026-11-24 (Remove the Claude workflows)
+
+`claude.yml` and `claude-code-review.yml` are gone. Every repo that called them
+carries the stock templates that Claude Code's `/install-github-app` generates,
+pinned through its own `actions.lock`.
+
+Ships under `v2` because no default branch calls either workflow. A branch that
+still does fails to start until it takes its default branch. The review's status
+check is `claude-review` in those repos, not `claude-review / claude-review`.
+
 ## v2 — 2026-11-19 (Lock action versions in `actions.lock`)
 
 Every `uses:` of an action now references a full version tag
