@@ -18,10 +18,7 @@ The one required status check is **`Lint Workflows`** — `actionlint` over
 `.github/workflows/**` (see `.github/workflows/ci.yml`). That same `ci.yml` also
 runs a **`Python`** job that dogfoods this repo's own `python-ci.yml` (via a
 local `./` ref) over `scripts/` — so the release tooling is tested with the same
-`uv` + `pytest` + `pre-commit` stack consumers get. The reusable Claude
-workflows are intentionally not dogfooded here: they need a
-`CLAUDE_CODE_OAUTH_TOKEN` secret this repo doesn't carry, and the review action
-skips whenever a PR changes a workflow file — which most PRs here do.
+`uv` + `pytest` + `pre-commit` stack consumers get.
 
 Inspect or edit the ruleset by fetching it (`gh api
 repos/jluszcz/github-utils/rulesets/<id>`), editing the JSON, and PUTting back
@@ -107,7 +104,7 @@ bump, which is a no-op for every workflow `v2` didn't change (only
 
 | Change | Tag |
 |---|---|
-| Bump a pinned action version (`checkout`, `claude-code-action`) | move current major |
+| Bump a pinned action version (`checkout`, `setup-node`) | move current major |
 | Tweak an `if:` gate / permissions (same job names) | move current major |
 | Add an optional `workflow_call` input with a default | move current major |
 | Add a *required* input, or remove/rename an input | cut next major |
@@ -123,10 +120,8 @@ the reusable job needs, or the job fails to start.
 ### Concurrency
 
 Each reusable workflow sets its own `concurrency` group so a superseded run is
-cancelled and the latest wins. `claude-code-review.yml` is the exception: it
-queues (`cancel-in-progress: false`) rather than cancelling, because cancelling
-would throw away the one review the PR gets. The group includes the **inputs
-that identify the call**, not just the workflow name — inside a called workflow
+cancelled and the latest wins. The group includes the **inputs that identify
+the call**, not just the workflow name — inside a called workflow
 `github.workflow` resolves to the *caller's* workflow name, so every call from
 one caller shares it. Without the inputs, calling the same reusable workflow
 twice in one caller (e.g. a `deploy` job per region) puts both in one group with
@@ -134,90 +129,6 @@ twice in one caller (e.g. a `deploy` job per region) puts both in one group with
 
 Callers need no `concurrency` block of their own. When adding an input that
 distinguishes one call from another, add it to that workflow's group too.
-
-### `.github/workflows/claude.yml`
-
-```yaml
-name: Claude Code
-on:
-  issue_comment: { types: [created] }
-  pull_request_review_comment: { types: [created] }
-  issues: { types: [opened, assigned] }
-  pull_request_review: { types: [submitted] }
-permissions:
-  contents: write
-  pull-requests: read
-  issues: read
-  id-token: write
-  actions: read
-jobs:
-  claude:
-    uses: jluszcz/github-utils/.github/workflows/claude.yml@v2
-    secrets: inherit
-```
-
-`contents: write` is what lets Claude push a commit to the PR branch when a
-comment asks it to fix something. Drop it to `read` in a repo where Claude
-should only ever comment; the reusable job's own `contents: write` is a ceiling,
-not a floor, so the caller's value wins when it is lower.
-
-### `.github/workflows/claude-code-review.yml`
-
-```yaml
-name: Claude Code Review
-on:
-  pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
-permissions:
-  contents: read
-  pull-requests: write
-  issues: read
-  id-token: write
-jobs:
-  claude-review:
-    uses: jluszcz/github-utils/.github/workflows/claude-code-review.yml@v2
-    secrets: inherit
-    # with:
-    #   debug: true                    # default false
-```
-
-Reviews run when the PR is opened, reopened, or marked ready for review — not on
-every subsequent push. Keep `synchronize` in the trigger types anyway: the job
-still runs and reports success on each new head commit, which a required status
-check needs, it just doesn't post another review. To request one on a later push,
-comment `@claude review this PR` on the PR (handled by `claude.yml`).
-
-Pushing while a review is running leaves that check **pending** until the review
-finishes. The `synchronize` run is queued behind the in-flight one rather than
-cancelling it, so the review always completes and posts, and the green check on
-the new head commit lands after it rather than during it. The findings describe
-the commit the review started on, which is not the head commit any more.
-
-A PR that edits this workflow file does not get reviewed. `claude-code-action`
-validates that its own workflow file on the PR head is byte-identical to the
-copy on the default branch, and skips itself when it is not — a PR cannot amend
-the workflow that reviews it. The step still reports success, so the check is
-green and the only trace is a `Skipping action due to workflow validation`
-warning in the job log. Merging is what makes such a change take effect, and a
-branch that predates the merge needs the default branch merged into it before
-its next review picks the change up.
-
-The review step follows Anthropic's stock `claude-code-review.yml` template:
-the `code-review` plugin's `/code-review:code-review` command, with `--comment`
-so findings are posted to the PR. The command's own `allowed-tools` grant
-everything it calls, so the workflow passes no `--allowedTools`. The command
-stops without posting when the PR is closed, a draft, trivially correct, or
-already has a Claude comment — so a green check with no comment is not by
-itself a failure.
-
-`debug: true` keeps Claude's execution log — the full turn stream, including a
-`permission_denials` entry per blocked call naming the tool and its input — as a
-`claude-execution-log` artifact on the run. Reach for it when a review misbehaves: the
-action hides that stream by default, and rerunning the job with Actions debug
-logging does not bring it back. Download it with
-`gh run download <run-id> -n claude-execution-log`. Leave it off the rest of the
-time — the log is the review verbatim, diff and file contents included, and it
-is readable by anyone who can read the repo's Actions runs.
 
 ### `.github/workflows/auto-merge.yml`
 
